@@ -14,7 +14,7 @@
 
 import {Component, Mixins, Prop} from 'vue-property-decorator'
 import BaseMixin from '@/components/mixins/base'
-import Hls from 'hls.js';
+import Hls from 'hls.js'
 
 @Component
 export default class Hlsstreamer extends Mixins(BaseMixin) {
@@ -41,18 +41,18 @@ export default class Hlsstreamer extends Mixins(BaseMixin) {
     }
 
     instantiatePlayer(){
-        this.hlsObject = new Hls();
+        this.hlsObject = new Hls()
         let stream = this.camSettings.urlStream
-        let video = this.$refs["hlsstreamer"];
-        this.hlsObject.loadSource(stream);
-        this.hlsObject.attachMedia(video);
+        let video = this.$refs['hlsstreamer']
+        this.hlsObject.loadSource(stream)
+        this.hlsObject.attachMedia(video)
         this.hlsObject.on(Hls.Events.MANIFEST_PARSED, function () {
-            video.play();
-        });
+            video.play()
+        })
     }
 
     startStream(){
-        let video = this.$refs["hlsstreamer"];
+        let video = this.$refs['hlsstreamer']
         if(this.hlsObject){
             video.play()
             this.seekToLive()
@@ -62,16 +62,14 @@ export default class Hlsstreamer extends Mixins(BaseMixin) {
     }
 
     seekToLive(){
-        let video = this.$refs["hlsstreamer"];
+        let video = this.$refs['hlsstreamer']
         if(!isNaN(video.duration)){
-            console.log("video current time: " + video.currentTime)
-            console.log("video duration: " + video.duration)
             video.currentTime = video.duration - 4
         }
     }
 
     stopStream(){
-        let video = this.$refs["hlsstreamer"];
+        let video = this.$refs['hlsstreamer']
         video.pause()
     }
 
