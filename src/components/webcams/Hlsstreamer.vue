@@ -5,7 +5,7 @@
 </style>
 
 <template>
-    <video ref="hlsstreamer" autoplay :style="webcamStyle" class="webcamImage" v-observe-visibility="visibilityChanged" />
+    <video controls ref="hlsstreamer" autoplay :style="webcamStyle" class="webcamImage" v-observe-visibility="visibilityChanged" />
 </template>
 
 <script lang="ts">
@@ -40,27 +40,57 @@ export default class Hlsstreamer extends Mixins(BaseMixin) {
         return ''
     }
 
-    mounted() {
+    instantiatePlayer(){
         this.hlsObject = new Hls();
         let stream = this.camSettings.urlStream
         let video = this.$refs["hlsstreamer"];
         this.hlsObject.loadSource(stream);
         this.hlsObject.attachMedia(video);
         this.hlsObject.on(Hls.Events.MANIFEST_PARSED, function () {
-        video.play();
+            video.play();
         });
     }
 
     startStream(){
         let video = this.$refs["hlsstreamer"];
-        video.play()
-        console.log("hls stream started")
+        if(this.hlsObject){
+            video.play()
+            this.seekToLive()
+        }else{
+            this.instantiatePlayer()
+        }
+    }
+
+    seekToLive(){
+        let video = this.$refs["hlsstreamer"];
+        if(!isNaN(video.duration)){
+            console.log("video current time: " + video.currentTime)
+            console.log("video duration: " + video.duration)
+            video.currentTime = video.duration - 4
+        }
     }
 
     stopStream(){
         let video = this.$refs["hlsstreamer"];
         video.pause()
-        console.log("hls stream stopped")
+    }
+
+    created () {
+        document.addEventListener('visibilitychange', this.handleDocumentVisibility, false)
+    }
+
+    // Used to:
+    //     - destroy the HLS stream when the document is no longer visible (e.g., the user has clicked on another tab)
+    //     - recreate the HLS stream when the document is again visible (e.g., the user is back on the mainsail tab)
+    handleDocumentVisibility(){
+        // Always recreate the stream to synchronize it
+        if(this.hlsObject){
+            this.hlsObject.destroy()
+            this.hlsObject = null
+        }
+        if (document.visibilityState === 'visible') {
+            this.startStream()
+        }
     }
 
     visibilityChanged(isVisible:boolean) {
@@ -68,9 +98,17 @@ export default class Hlsstreamer extends Mixins(BaseMixin) {
 
         if (isVisible) {
             this.startStream()
+
         } else {
             this.stopStream()
         }
+    }
+
+    beforeDestroy() {
+        if(this.hlsObject){
+            this.hlsObject.destroy()
+        }
+        document.removeEventListener('visibilitychange', this.handleDocumentVisibility, false)
     }
 }
 </script>
