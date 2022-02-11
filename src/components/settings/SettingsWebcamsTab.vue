@@ -69,7 +69,7 @@
                                     ></v-text-field>
                                 </v-col>
                             </v-row>
-                            <v-row>
+                            <v-row v-if="form.service !== 'hlsstream'">
                                 <v-col class="py-1">
                                     <v-text-field
                                         v-model="form.urlSnapshot"
@@ -133,6 +133,9 @@
                             <template v-else-if="form.service === 'ipstream'">
                                 <webcam-ipstreamer :cam-settings="form"></webcam-ipstreamer>
                             </template>
+                            <template v-else-if="form.service === 'hlsstream'">
+                                <webcam-hlsstreamer :cam-settings="form"></webcam-hlsstreamer>
+                            </template>
                             <template v-else>
                                 <p class="text-center py-3 font-italic">{{ $t('Panels.WebcamPanel.UnknownWebcamService') }}</p>
                             </template>
@@ -169,6 +172,7 @@ import Mjpegstreamer from '@/components/webcams/Mjpegstreamer.vue'
 import MjpegstreamerAdaptive from '@/components/webcams/MjpegstreamerAdaptive.vue'
 import Uv4lMjpeg from '@/components/webcams/Uv4lMjpeg.vue'
 import Ipstreamer from '@/components/webcams/Ipstreamer.vue'
+import Hlsstreamer from '@/components/webcams/Hlsstreamer.vue'
 
 interface webcamForm {
     bool: boolean
@@ -191,6 +195,7 @@ interface webcamForm {
         'webcam-mjpegstreamer-adaptive': MjpegstreamerAdaptive,
         'webcam-uv4l-mjpeg': Uv4lMjpeg,
         'webcam-ipstreamer': Ipstreamer,
+        'webcam-hlsstreamer': Hlsstreamer,
     }
 })
 export default class SettingsWebcamsTab extends Mixins(BaseMixin) {
@@ -241,6 +246,7 @@ export default class SettingsWebcamsTab extends Mixins(BaseMixin) {
             { value: 'mjpegstreamer-adaptive',  text: this.$t('Settings.WebcamsTab.MjpegstreamerAdaptive') },
             { value: 'uv4l-mjpeg',              text: this.$t('Settings.WebcamsTab.Uv4lMjpeg') },
             { value: 'ipstream',                text: this.$t('Settings.WebcamsTab.Ipstream') },
+            { value: 'hlsstream',               text: this.$t('Settings.WebcamsTab.Hlsstream') },
         ]
     }
 

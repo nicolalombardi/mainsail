@@ -8,7 +8,7 @@ export interface GuiWebcamStateWebcam {
     id?: string
     name: string
     icon: string
-    service: 'mjpegstreamer' | 'mjpegstreamer-adaptive' | 'uv4l-mjpeg' | 'ipstream'
+    service: 'mjpegstreamer' | 'mjpegstreamer-adaptive' | 'uv4l-mjpeg' | 'ipstream' | 'hlsstream'
     targetFps: number
     urlStream: string
     urlSnapshot: string
