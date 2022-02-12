@@ -18,7 +18,6 @@ import Hls from 'hls.js'
 
 @Component
 export default class Hlsstreamer extends Mixins(BaseMixin) {
-    private isVisible = true
     private hlsObject : Hls | null = null
 
     declare $refs: {
@@ -82,8 +81,6 @@ export default class Hlsstreamer extends Mixins(BaseMixin) {
     }
 
     visibilityChanged(isVisible:boolean) {
-        this.isVisible = isVisible
-
         if (isVisible) {
             this.startStream()
 
