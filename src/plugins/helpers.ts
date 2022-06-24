@@ -1,5 +1,37 @@
 import { FileStateFile } from '@/store/files/types'
 import { PrinterStateMacroParams } from '@/store/printer/types'
+import {
+    mdiArrowCollapseVertical,
+    mdiCodeTags,
+    mdiConsoleLine,
+    mdiDipSwitch,
+    mdiEngine,
+    mdiGamepad,
+    mdiInformation,
+    mdiPrinter3d,
+    mdiPrinter3dNozzle,
+    mdiThermometerLines,
+    mdiWebcam,
+} from '@mdi/js'
+import Vue from 'vue'
+
+export const setDataDeep = (currentState: any, payload: any) => {
+    if (payload !== null && typeof payload === 'object') {
+        Object.keys(payload).forEach((key: string) => {
+            const value = payload[key]
+
+            if (
+                typeof value === 'object' &&
+                !Array.isArray(value) &&
+                key in currentState &&
+                value !== null &&
+                currentState[key] !== null
+            ) {
+                setDataDeep(currentState[key], value)
+            } else Vue.set(currentState, key, value)
+        })
+    }
+}
 
 export const findDirectory = (folder: FileStateFile[], dirArray: string[]): FileStateFile[] | null => {
     if (folder !== undefined && folder !== null && dirArray.length) {
@@ -34,30 +66,30 @@ export const capitalize = (str: string): string => {
 }
 
 export const convertPanelnameToIcon = (name: string): string => {
-    if (name.startsWith('macrogroup_')) return 'mdi-code-tags'
+    if (name.startsWith('macrogroup_')) return mdiCodeTags
 
     switch (name) {
         case 'webcam':
-            return 'mdi-webcam'
+            return mdiWebcam
         case 'zoffset':
-            return 'mdi-arrow-collapse-vertical'
-        case 'control':
-            return 'mdi-gamepad'
+            return mdiArrowCollapseVertical
+        case 'toolhead-control':
+            return mdiGamepad
         case 'macros':
-            return 'mdi-code-tags'
-        case 'printsettings':
-            return 'mdi-printer-3d'
+            return mdiCodeTags
         case 'miscellaneous':
-            return 'mdi-dip-switch'
-        case 'tools':
-            return 'mdi-thermometer-lines'
+            return mdiDipSwitch
+        case 'temperature':
+            return mdiThermometerLines
         case 'miniconsole':
-            return 'mdi-console-line'
+            return mdiConsoleLine
         case 'machine-settings':
-            return 'mdi-engine'
+            return mdiEngine
+        case 'extruder-control':
+            return mdiPrinter3dNozzle
 
         default:
-            return 'mdi-information'
+            return mdiInformation
     }
 }
 
@@ -250,4 +282,9 @@ export function getMacroParams(macro: { gcode: string }): PrinterStateMacroParam
     }
 
     return ret
+}
+
+export function windowBeforeUnloadFunction(e: BeforeUnloadEvent) {
+    e.preventDefault()
+    e.returnValue = ''
 }

@@ -4,6 +4,14 @@ import {
     ServerHistoryStateAllPrintStatusEntry,
     ServerHistoryStateJob,
 } from '@/store/server/history/types'
+import {
+    mdiAlertCircleOutline,
+    mdiAlertOutline,
+    mdiCheckboxMarkedCircleOutline,
+    mdiCloseCircleOutline,
+    mdiProgressClock,
+} from '@mdi/js'
+import i18n from '@/plugins/i18n'
 
 // eslint-disable-next-line
 export const getters: GetterTree<ServerHistoryState, any> = {
@@ -71,6 +79,10 @@ export const getters: GetterTree<ServerHistoryState, any> = {
             const index = output.findIndex((element) => element.name === current.status)
             if (index !== -1) output[index].value += 1
             else {
+                const displayName = i18n.te(`History.StatusValues.${current.status}`, 'en')
+                    ? i18n.t(`History.StatusValues.${current.status}`).toString()
+                    : current.status
+
                 const itemStyle = {
                     opacity: 0.9,
                     color: '#424242',
@@ -95,8 +107,9 @@ export const getters: GetterTree<ServerHistoryState, any> = {
 
                 output.push({
                     name: current.status,
+                    displayName,
                     value: 1,
-                    itemStyle: itemStyle,
+                    itemStyle,
                     showInTable: !rootState.gui?.view.history.hidePrintStatus.includes(current.status),
                     label: {
                         color: '#fff',
@@ -115,6 +128,9 @@ export const getters: GetterTree<ServerHistoryState, any> = {
             const index = output.findIndex((element) => element.name === current.status)
             if (index !== -1) output[index].value += 1
             else {
+                const displayName = i18n.te(`History.StatusValues.${current.status}`, 'en')
+                    ? i18n.t(`History.StatusValues.${current.status}`).toString()
+                    : current.status
                 const itemStyle = {
                     opacity: 0.9,
                     color: '#424242',
@@ -139,6 +155,7 @@ export const getters: GetterTree<ServerHistoryState, any> = {
 
                 output.push({
                     name: current.status,
+                    displayName,
                     value: 1,
                     itemStyle: itemStyle,
                     showInTable: !rootState.gui?.view.history.hidePrintStatus.includes(current.status),
@@ -230,6 +247,36 @@ export const getters: GetterTree<ServerHistoryState, any> = {
         return ''
     },
 
+    getPrintJobById: (state) => (job_id: string) => {
+        if (state.jobs.length === 0) return
+
+        return state.jobs.find((job) => job.job_id === job_id)
+    },
+
+    getPrintJobsForGcodes:
+        (state) =>
+        (
+            filename: string,
+            modified: number,
+            filesize: number,
+            uuid: string | null,
+            job_id: string | null
+        ): ServerHistoryStateJob[] => {
+            if (state.jobs.length === 0) return []
+
+            // find jobs via file uuid
+            if (uuid) return state.jobs.filter((job) => job.metadata?.uuid === uuid)
+
+            // find jobs via metadata
+            const jobs = state.jobs.filter((job) => {
+                return job.metadata?.size === filesize && Math.round(job.metadata?.modified * 1000) === modified
+            })
+            if (jobs.length) return jobs
+            if (job_id) return jobs.filter((job) => job.job_id === job_id)
+
+            return []
+        },
+
     getPrintStatusByFilename: (state) => (filename: string, modified: number) => {
         if (state.jobs.length) {
             const job = state.jobs.find((job) => {
@@ -242,7 +289,7 @@ export const getters: GetterTree<ServerHistoryState, any> = {
         return ''
     },
 
-    getPrintStatusChipColor: () => (status: string) => {
+    getPrintStatusIconColor: () => (status: string) => {
         switch (status) {
             case 'in_progress':
                 return 'blue accent-3' //'blue-grey darken-1'
@@ -256,17 +303,31 @@ export const getters: GetterTree<ServerHistoryState, any> = {
         }
     },
 
-    getPrintStatusChipIcon: () => (status: string) => {
+    getPrintStatusTextColor: () => (status: string) => {
         switch (status) {
             case 'in_progress':
-                return 'mdi-progress-clock'
+                return 'blue--text' //'blue-grey darken-1'
             case 'completed':
-                return 'mdi-checkbox-marked-circle-outline'
+                return 'green--text' //'green'
             case 'cancelled':
-                return 'mdi-close-circle-outline'
+                return 'red--text'
 
             default:
-                return 'mdi-alert-outline'
+                return 'orange--text'
+        }
+    },
+
+    getPrintStatusIcon: () => (status: string) => {
+        switch (status) {
+            case 'in_progress':
+                return mdiProgressClock
+            case 'completed':
+                return mdiCheckboxMarkedCircleOutline
+            case 'cancelled':
+                return mdiCloseCircleOutline
+
+            default:
+                return mdiAlertOutline
         }
     },
 

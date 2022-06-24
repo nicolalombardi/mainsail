@@ -26,8 +26,9 @@ export const actions: ActionTree<PrinterTempHistoryState, RootState> = {
         dispatch('reset')
 
         const now = new Date()
+        const allHeaters = rootGetters['printer/getAvailableHeaters'] ?? []
         const allSensors = rootGetters['printer/getAvailableSensors'] ?? []
-        const maxHistory = rootGetters['server/getConfig']('server', 'temperature_store_size') || 1200
+        const maxHistory = rootGetters['printer/tempHistory/getTemperatureStoreSize']
 
         if (payload !== undefined) {
             if ('requestParams' in payload) delete payload.requestParams
@@ -62,18 +63,18 @@ export const actions: ActionTree<PrinterTempHistoryState, RootState> = {
                     const addValues: {
                         temperatures: number[]
                         targets?: number[]
-                        power?: number[]
-                        speed?: number[]
+                        powers?: number[]
+                        speeds?: number[]
                     } = {
                         temperatures: Array(maxHistory).fill(0),
                     }
 
-                    if (['heater_bed', 'heater_generic'].includes(sensorType) || sensorType.startsWith('extruder')) {
+                    if (allHeaters.includes(key)) {
                         addValues.targets = Array(maxHistory).fill(0)
-                        addValues.power = Array(maxHistory).fill(0)
+                        addValues.powers = Array(maxHistory).fill(0)
                     } else if (['temperature_fan'].includes(sensorType)) {
                         addValues.targets = Array(maxHistory).fill(0)
-                        addValues.speed = Array(maxHistory).fill(0)
+                        addValues.speeds = Array(maxHistory).fill(0)
                     }
 
                     importData[key] = { ...addValues }
@@ -106,12 +107,12 @@ export const actions: ActionTree<PrinterTempHistoryState, RootState> = {
             const masterDatasetKeys = tempDatasetKeys
                 .filter((tmp) => {
                     if (tmp.startsWith('_')) return false
-                    if (tmp.lastIndexOf('-') > -1) {
-                        const suffix = tmp.slice(tmp.lastIndexOf('-') + 1)
-                        return !['target', 'power'].includes(suffix)
-                    }
 
-                    return true
+                    const lastIndex = tmp.lastIndexOf('-')
+                    if (lastIndex === -1) return true
+
+                    const suffix = tmp.slice(lastIndex + 1)
+                    return !['target', 'power', 'speed'].includes(suffix)
                 })
                 .sort()
             const series: PrinterTempHistoryStateSerie[] = []
@@ -267,7 +268,7 @@ export const actions: ActionTree<PrinterTempHistoryState, RootState> = {
 
             await commit('addToSource', {
                 data: data,
-                maxHistory: rootGetters['server/getConfig']('server', 'temperature_store_size') || 1200,
+                maxHistory: rootGetters['printer/tempHistory/getTemperatureStoreSize'],
             })
         }
 

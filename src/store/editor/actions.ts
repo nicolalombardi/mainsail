@@ -5,14 +5,23 @@ import axios from 'axios'
 import { sha256 } from 'js-sha256'
 import Vue from 'vue'
 import i18n from '@/plugins/i18n'
+import { windowBeforeUnloadFunction } from '@/plugins/helpers'
 
 export const actions: ActionTree<EditorState, RootState> = {
     reset({ commit }) {
         commit('reset')
     },
 
-    openFile({ state, dispatch, commit, rootGetters }, payload) {
-        const fullFilepath = payload.root + payload.path + '/' + payload.filename
+    openFile({ state, dispatch, commit, rootGetters, rootState }, payload) {
+        const fullFilepathArray = []
+        fullFilepathArray.push(payload.root)
+        let path = payload.path
+        if (path.slice(0, 1) === '/') path = path.slice(1)
+        if (path.slice(-1) === '/') path = path.slice(0, -1)
+        if (path !== '') fullFilepathArray.push(path)
+        fullFilepathArray.push(payload.filename)
+
+        const fullFilepath = fullFilepathArray.join('/')
         const url = rootGetters['socket/getUrl'] + '/server/files/' + encodeURI(fullFilepath) + `?${Date.now()}`
 
         if (state.cancelToken) dispatch('cancelLoad')
@@ -65,7 +74,7 @@ export const actions: ActionTree<EditorState, RootState> = {
                 commit('openFile', {
                     filename: payload.filename,
                     fileroot: payload.root,
-                    filepath: payload.path,
+                    filepath: path,
                     file,
                 })
             })
@@ -77,14 +86,14 @@ export const actions: ActionTree<EditorState, RootState> = {
     },
 
     async saveFile(
-        { state, commit, rootGetters, dispatch },
+        { state, commit, getters, rootGetters, dispatch },
         payload: { content: string; restartServiceName: string | null }
     ) {
         const content = new Blob([payload.content], { type: 'text/plain' })
         const formData = new FormData()
         formData.append('file', content, state.filename)
         formData.append('root', state.fileroot)
-        formData.append('path', state.filepath.slice(1))
+        formData.append('path', state.filepath)
         formData.append('checksum', sha256(payload.content))
 
         const url = rootGetters['socket/getUrl'] + '/server/files/upload'
@@ -133,8 +142,12 @@ export const actions: ActionTree<EditorState, RootState> = {
                 dispatch('clearLoader')
                 Vue.$toast.success(i18n.t('Editor.SuccessfullySaved', { filename: data.item.path }).toString())
                 if (payload.restartServiceName === 'klipper') {
+                    const klipperRestartMethod = getters['getKlipperRestartMethod']
                     //dispatch('server/addEvent', { message: 'FIRMWARE_RESTART', type: 'command' })
-                    Vue.$socket.emit('printer.gcode.script', { script: 'FIRMWARE_RESTART' })
+                    Vue.$socket.emit('printer.gcode.script', { script: klipperRestartMethod })
+                } else if (payload.restartServiceName === 'moonraker') {
+                    const moonrakerRestartInstance = getters['getMoonrakerRestartInstance']
+                    Vue.$socket.emit('machine.services.restart', { service: moonrakerRestartInstance })
                 } else if (payload.restartServiceName !== null) {
                     Vue.$socket.emit('machine.services.restart', { service: payload.restartServiceName })
                 }
@@ -169,6 +182,8 @@ export const actions: ActionTree<EditorState, RootState> = {
 
     close({ commit }) {
         commit('reset')
+
+        window.removeEventListener('beforeunload', windowBeforeUnloadFunction)
     },
 
     updateSourcecode({ commit }, payload) {

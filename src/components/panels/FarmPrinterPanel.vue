@@ -1,36 +1,6 @@
-<style scoped>
-.v-card.disabledPrinter {
-    opacity: 0.6;
-    filter: grayscale(70%);
-}
-
-.webcamContainer,
-.webcamContainer .vue-load-image,
-.webcamContainer > div,
-.webcamContainer img {
-    position: absolute !important;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-}
-
-.webcamContainer img {
-    height: 100%;
-}
-
-.webcamContainer .webcamFpsOutput {
-    display: none;
-}
-
-.v-overlay {
-    top: 48px;
-}
-</style>
-
 <template>
     <panel
-        icon="mdi-printer-3d"
+        :icon="mdiPrinter3d"
         :title="printer_name"
         :card-class="
             'farmprinter-panel ' +
@@ -42,26 +12,26 @@
             <v-menu v-if="showWebcamSwitch" :offset-y="true" title="Webcam">
                 <template #activator="{ on, attrs }">
                     <v-btn text v-bind="attrs" v-on="on">
-                        <v-icon small>mdi-webcam</v-icon>
-                        <v-icon small>mdi-menu-down</v-icon>
+                        <v-icon small>{{ mdiWebcam }}</v-icon>
+                        <v-icon small>{{ mdiMenuDown }}</v-icon>
                     </v-btn>
                 </template>
                 <v-list dense class="py-0">
                     <v-list-item link @click="currentCamId = 'off'">
-                        <v-list-item-icon class="mr-0">
-                            <v-icon small>mdi-webcam-off</v-icon>
+                        <v-list-item-icon class="mr-2">
+                            <v-icon small class="mt-1">{{ mdiWebcamOff }}</v-icon>
                         </v-list-item-icon>
                         <v-list-item-content>
                             <v-list-item-title>{{ $t('Panels.FarmPrinterPanel.WebcamOff') }}</v-list-item-title>
                         </v-list-item-content>
                     </v-list-item>
                     <v-list-item
-                        v-for="webcam of printer_webcams"
+                        v-for="webcam of supportedPrinterWebcams"
                         :key="webcam.index"
                         link
                         @click="currentCamId = webcam.id">
-                        <v-list-item-icon class="mr-0">
-                            <v-icon small>{{ webcam.icon }}</v-icon>
+                        <v-list-item-icon class="mr-2">
+                            <v-icon small class="mt-1">{{ convertWebcamIcon(webcam.icon) }}</v-icon>
                         </v-list-item-icon>
                         <v-list-item-content>
                             <v-list-item-title v-text="webcam.name"></v-list-item-title>
@@ -75,21 +45,28 @@
                 <div>
                     <v-img ref="imageDiv" :height="imageHeight" :src="printer_image" class="d-flex align-end">
                         <div
-                            v-if="printer.socket.isConnected && currentCamId !== 'off' && currentWebcam"
+                            v-if="
+                                printer.socket.isConnected &&
+                                currentCamId !== 'off' &&
+                                currentWebcam &&
+                                'service' in currentWebcam
+                            "
                             class="webcamContainer">
-                            <template v-if="'service' in currentWebcam && currentWebcam.service === 'mjpegstreamer'">
-                                <webcam-mjpegstreamer
-                                    :cam-settings="currentWebcam"
-                                    :printer-url="printerUrl"
-                                    :show-fps="false"></webcam-mjpegstreamer>
-                            </template>
-                            <template
-                                v-if="'service' in currentWebcam && currentWebcam.service === 'mjpegstreamer-adaptive'">
-                                <webcam-mjpegstreamer-adaptive
-                                    :cam-settings="currentWebcam"
-                                    :printer-url="printerUrl"
-                                    :show-fps="false"></webcam-mjpegstreamer-adaptive>
-                            </template>
+                            <webcam-mjpegstreamer
+                                v-if="currentWebcam.service === 'mjpegstreamer'"
+                                :cam-settings="currentWebcam"
+                                :printer-url="printerUrl"
+                                :show-fps="false"></webcam-mjpegstreamer>
+                            <webcam-mjpegstreamer-adaptive
+                                v-else-if="currentWebcam.service === 'mjpegstreamer-adaptive'"
+                                :cam-settings="currentWebcam"
+                                :printer-url="printerUrl"
+                                :show-fps="false"></webcam-mjpegstreamer-adaptive>
+                            <webcam-uv4l-mjpeg
+                                v-else-if="currentWebcam.service === 'uv4l-mjpeg'"
+                                :cam-settings="currentWebcam"
+                                :printer-url="printerUrl"
+                                :show-fps="false"></webcam-uv4l-mjpeg>
                         </div>
                         <v-card-title
                             class="white--text py-2"
@@ -111,7 +88,7 @@
                                     <span
                                         v-if="printer_current_filename !== ''"
                                         class="subtitle-2 text-truncate px-0 text--disabled d-block">
-                                        <v-icon small class="mr-1">mdi-file-outline</v-icon>
+                                        <v-icon small class="mr-1">{{ mdiFileOutline }}</v-icon>
                                         {{ printer_current_filename }}
                                     </span>
                                 </v-col>
@@ -145,6 +122,7 @@
                 </div>
             </template>
         </v-hover>
+        <resize-observer @notify="handleResize" />
     </panel>
 </template>
 
@@ -154,18 +132,30 @@ import BaseMixin from '@/components/mixins/base'
 import { FarmPrinterState } from '@/store/farm/printer/types'
 import Mjpegstreamer from '@/components/webcams/Mjpegstreamer.vue'
 import MjpegstreamerAdaptive from '@/components/webcams/MjpegstreamerAdaptive.vue'
+import Uv4lMjpeg from '@/components/webcams/Uv4lMjpeg.vue'
 import MainsailLogo from '@/components/ui/MainsailLogo.vue'
 import Panel from '@/components/ui/Panel.vue'
+import { mdiPrinter3d, mdiWebcam, mdiMenuDown, mdiWebcamOff, mdiFileOutline } from '@mdi/js'
+import { Debounce } from 'vue-debounce-decorator'
+import { GuiWebcamStateWebcam } from '@/store/gui/webcams/types'
+import WebcamMixin from '@/components/mixins/webcam'
 
 @Component({
     components: {
         Panel,
         'webcam-mjpegstreamer': Mjpegstreamer,
         'webcam-mjpegstreamer-adaptive': MjpegstreamerAdaptive,
+        'webcam-uv4l-mjpeg': Uv4lMjpeg,
         'mainsail-logo': MainsailLogo,
     },
 })
-export default class FarmPrinterPanel extends Mixins(BaseMixin) {
+export default class FarmPrinterPanel extends Mixins(BaseMixin, WebcamMixin) {
+    mdiPrinter3d = mdiPrinter3d
+    mdiWebcam = mdiWebcam
+    mdiMenuDown = mdiMenuDown
+    mdiWebcamOff = mdiWebcamOff
+    mdiFileOutline = mdiFileOutline
+
     private imageHeight = 200
 
     @Prop({ type: Object, required: true }) declare printer: FarmPrinterState
@@ -206,6 +196,8 @@ export default class FarmPrinterPanel extends Mixins(BaseMixin) {
     }
 
     get printer_image() {
+        if (this.currentWebcam) return '/img/sidebar-background.svg'
+
         return this.$store.getters['farm/' + this.printer._namespace + '/getImage']
     }
 
@@ -226,11 +218,17 @@ export default class FarmPrinterPanel extends Mixins(BaseMixin) {
     }
 
     get showWebcamSwitch() {
-        return this.printer.socket.isConnected && this.printer_webcams.length > 0
+        return this.printer.socket.isConnected && this.supportedPrinterWebcams.length > 0
     }
 
     get printer_webcams() {
         return this.$store.getters['farm/' + this.printer._namespace + '/getPrinterWebcams']
+    }
+
+    get supportedPrinterWebcams() {
+        return this.printer_webcams.filter((webcam: GuiWebcamStateWebcam) =>
+            ['mjpegstreamer', 'mjpegstreamer-adaptive', 'uv4l-mjpeg'].includes(webcam.service)
+        )
     }
 
     get currentWebcam() {
@@ -246,18 +244,59 @@ export default class FarmPrinterPanel extends Mixins(BaseMixin) {
     }
 
     mounted() {
-        window.addEventListener('resize', this.resize)
-        this.resize()
+        this.calcImageHeight()
     }
 
-    beforeDestroy() {
-        window.removeEventListener('resize', this.resize)
-    }
-
-    resize() {
+    calcImageHeight() {
         if (this.imageDiv?.$el?.clientWidth) {
             this.imageHeight = Math.round((this.imageDiv.$el.clientWidth / 3) * 2)
-        } else this.imageHeight = 200
+            return
+        }
+
+        this.imageHeight = 200
+    }
+
+    @Debounce(200)
+    handleResize() {
+        this.$nextTick(() => {
+            this.calcImageHeight()
+        })
     }
 }
 </script>
+
+<style scoped>
+.v-card.disabledPrinter {
+    opacity: 0.6;
+    filter: grayscale(70%);
+}
+
+.webcamContainer,
+.webcamContainer .vue-load-image,
+.webcamContainer > div,
+.webcamContainer img {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.webcamContainer img {
+    height: 100%;
+}
+
+.webcamContainer .webcamFpsOutput {
+    display: none;
+}
+
+.v-overlay {
+    top: 48px;
+}
+</style>
+
+<style>
+.farmprinter-panel {
+    position: relative;
+}
+</style>

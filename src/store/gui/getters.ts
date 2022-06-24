@@ -25,8 +25,12 @@ export const getters: GetterTree<GuiState, any> = {
         return true
     },
 
-    getPanelExpand: (state) => (name: string) => {
-        return !state.dashboard.nonExpandPanels?.includes(name) ?? true
+    getPanelExpand: (state) => (name: string, viewport: string) => {
+        if ('dashboard' in state && viewport in state.dashboard.nonExpandPanels) {
+            return !state.dashboard.nonExpandPanels[viewport].includes(name) ?? true
+        }
+
+        return true
     },
 
     getPanels: (state, getters, rootState) => (viewport: string) => {
@@ -42,7 +46,7 @@ export const getters: GetterTree<GuiState, any> = {
                 panels = panels.filter((element: any) => {
                     if (!element.name.startsWith('macrogroup_')) return true
 
-                    const macrogroupId = element.name.substr(11)
+                    const macrogroupId = element.name.slice(11)
                     return (
                         macrogroups.findIndex(
                             (macrogroup: GuiMacrosStateMacrogroup) => macrogroup.id === macrogroupId
@@ -59,7 +63,10 @@ export const getters: GetterTree<GuiState, any> = {
         return panels
     },
 
-    getLockedSliders: (state) => (name: string) => {
-        return state.view.lockedSliders?.includes(name) ?? false
+    getDefaultControlActionButton: (state, getters, rootState, rootGetters) => {
+        if (rootGetters['printer/existsQGL']) return 'qgl'
+        else if (rootGetters['printer/existsZtilt']) return 'ztilt'
+
+        return 'm84'
     },
 }

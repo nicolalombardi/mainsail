@@ -4,6 +4,7 @@
         v-observe-visibility="visibilityChanged"
         :option="chartOptions"
         :init-options="{ renderer: 'svg' }"
+        :autoresize="true"
         style="height: 250px; width: 100%"></e-chart>
 </template>
 
@@ -16,6 +17,7 @@ import { PrinterTempHistoryStateSerie, PrinterTempHistoryStateSourceEntry } from
 
 import type { ECharts } from 'echarts/core'
 import type { ECBasicOption } from 'echarts/types/dist/shared'
+import { mdiClock } from '@mdi/js'
 
 interface echartsTooltipObj {
     [key: string]: any
@@ -25,8 +27,6 @@ interface echartsTooltipObj {
     components: {},
 })
 export default class TempChart extends Mixins(BaseMixin) {
-    convertName = convertName
-
     declare $refs: {
         tempchart: any
     }
@@ -46,7 +46,7 @@ export default class TempChart extends Mixins(BaseMixin) {
                 fontSize: '14px',
             },
             padding: 15,
-            formatter: this.tooltipFormater,
+            formatter: this.tooltipFormatter,
             confine: true,
             className: 'echarts-tooltip',
             position: function (pos: any, params: any, dom: any, rect: any, size: any) {
@@ -88,7 +88,7 @@ export default class TempChart extends Mixins(BaseMixin) {
         },
         yAxis: [
             {
-                name: this.$t('Panels.ToolsPanel.TemperaturesInChart'),
+                name: this.$t('Panels.TemperaturePanel.TemperaturesInChart'),
                 type: 'value',
                 min: 0,
                 max: (value: any) => {
@@ -194,11 +194,11 @@ export default class TempChart extends Mixins(BaseMixin) {
     }
 
     get chart(): ECharts | null {
-        return this.$refs.tempchart ?? null
+        return this.$refs.tempchart?.chart ?? null
     }
 
     get maxHistory() {
-        return this.$store.getters['server/getConfig']('server', 'temperature_store_size') ?? 1200
+        return this.$store.getters['printer/tempHistory/getTemperatureStoreSize']
     }
 
     get series() {
@@ -288,21 +288,17 @@ export default class TempChart extends Mixins(BaseMixin) {
         }
     }
 
-    tooltipFormater(datasets: any) {
+    tooltipFormatter(datasets: any) {
         let output = ''
 
         const mainDatasets = datasets.filter((dataset: any) => {
             if (dataset.seriesName === 'date') return false
-            if (dataset.seriesName.includes('-')) {
-                if (dataset.seriesName.lastIndexOf('-') > -1) {
-                    const suffix = dataset.seriesName.slice(dataset.seriesName.lastIndexOf('-') + 1)
-                    return !['target', 'power'].includes(suffix)
-                }
 
-                return true
-            }
+            const lastIndex = dataset.seriesName.lastIndexOf('-')
+            if (lastIndex === -1) return true
 
-            return true
+            const suffix = dataset.seriesName.slice(lastIndex + 1)
+            return !['target', 'power', 'speed'].includes(suffix)
         })
         if (datasets.length) {
             let outputTime = datasets[0]['axisValueLabel']
@@ -311,8 +307,13 @@ export default class TempChart extends Mixins(BaseMixin) {
             output +=
                 '<div class="row">' +
                 '<div class="col py-1" style=\'border-bottom: 1px solid rgba(255, 255, 255, 0.24);\'>' +
-                "<span class='v-icon mdi mdi-clock theme-dark' style='font-size: 14px; margin-right: 5px;'></span>" +
-                "<span class='font-weight-bold'>" +
+                '<span class="v-icon mdi theme-dark" style="margin-right: 5px;">' +
+                '<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true" viewBox="0 0 24 24" class="v-icon__svg" style="font-size: 12px; width: 12px; height: 12px;">' +
+                `<path d="${mdiClock}">` +
+                '</path>' +
+                '</svg>' +
+                '</span>' +
+                '<span class="font-weight-bold">' +
                 outputTime +
                 '</span>' +
                 '</div>' +

@@ -47,7 +47,6 @@
             <v-toolbar-title class="text-no-wrap ml-0 pl-2 mr-2">{{ printerName }}</v-toolbar-title>
             <printer-selector v-if="countPrinters"></printer-selector>
             <v-spacer></v-spacer>
-            <the-throttled-states></the-throttled-states>
             <input
                 ref="fileUploadAndStart"
                 type="file"
@@ -64,7 +63,7 @@
                 :disabled="printerIsPrinting"
                 :loading="loadings.includes('topbarSaveConfig')"
                 @click="saveConfig">
-                <v-icon class="d-md-none">mdi-content-save</v-icon>
+                <v-icon class="d-md-none">{{ mdiContentSave }}</v-icon>
                 <span class="d-none d-md-inline">{{ $t('App.TopBar.SAVE_CONFIG') }}</span>
             </v-btn>
             <v-btn
@@ -80,7 +79,7 @@
                 class="button-min-width-auto px-3 d-none d-sm-flex upload-and-start-button"
                 :loading="loadings.includes('btnUploadAndStart')"
                 @click="btnUploadAndStart">
-                <v-icon class="mr-md-2">mdi-file-upload</v-icon>
+                <v-icon class="mr-md-2">{{ mdiFileUpload }}</v-icon>
                 <span class="d-none d-md-inline">{{ $t('App.TopBar.UploadPrint') }}</span>
             </v-btn>
             <v-btn
@@ -92,9 +91,10 @@
                 class="button-min-width-auto px-3 emergency-button"
                 :loading="loadings.includes('topbarEmergencyStop')"
                 @click="btnEmergencyStop">
-                <v-icon class="mr-md-2">mdi-alert-circle-outline</v-icon>
+                <v-icon class="mr-md-2">{{ mdiAlertCircleOutline }}</v-icon>
                 <span class="d-none d-md-inline">{{ $t('App.TopBar.EmergencyStop') }}</span>
             </v-btn>
+            <the-notification-menu></the-notification-menu>
             <the-settings-menu></the-settings-menu>
             <the-top-corner-menu></the-top-corner-menu>
         </v-app-bar>
@@ -106,7 +106,7 @@
             <v-progress-linear class="mt-2" :value="uploadSnackbar.percent"></v-progress-linear>
             <template #action="{ attrs }">
                 <v-btn color="red" text v-bind="attrs" style="min-width: auto" @click="cancelUpload">
-                    <v-icon class="0">mdi-close</v-icon>
+                    <v-icon class="0">{{ mdiClose }}</v-icon>
                 </v-btn>
             </template>
         </v-snackbar>
@@ -115,10 +115,12 @@
                 :title="$t('EmergencyStopDialog.EmergencyStop')"
                 toolbar-color="error"
                 card-class="emergency-stop-dialog"
-                icon="mdi-alert-circle-outline"
+                :icon="mdiAlertCircleOutline"
                 :margin-bottom="false">
                 <template #buttons>
-                    <v-btn icon tile @click="showEmergencyStopDialog = false"><v-icon>mdi-close-thick</v-icon></v-btn>
+                    <v-btn icon tile @click="showEmergencyStopDialog = false">
+                        <v-icon>{{ mdiCloseThick }}</v-icon>
+                    </v-btn>
                 </template>
                 <v-card-text>{{ $t('EmergencyStopDialog.AreYouSure') }}</v-card-text>
                 <v-card-actions>
@@ -140,11 +142,12 @@ import axios from 'axios'
 import { formatFilesize } from '@/plugins/helpers'
 import TheTopCornerMenu from '@/components/TheTopCornerMenu.vue'
 import TheSettingsMenu from '@/components/TheSettingsMenu.vue'
-import TheThrottledStates from '@/components/TheThrottledStates.vue'
 import Panel from '@/components/ui/Panel.vue'
 import PrinterSelector from '@/components/ui/PrinterSelector.vue'
 import MainsailLogo from '@/components/ui/MainsailLogo.vue'
+import TheNotificationMenu from '@/components/notifications/TheNotificationMenu.vue'
 import { topbarHeight } from '@/store/variables'
+import { mdiAlertCircleOutline, mdiContentSave, mdiFileUpload, mdiClose, mdiCloseThick } from '@mdi/js'
 
 type uploadSnackbar = {
     status: boolean
@@ -162,14 +165,20 @@ type uploadSnackbar = {
 @Component({
     components: {
         Panel,
-        TheThrottledStates,
         TheSettingsMenu,
         TheTopCornerMenu,
         PrinterSelector,
         MainsailLogo,
+        TheNotificationMenu,
     },
 })
 export default class TheTopbar extends Mixins(BaseMixin) {
+    mdiAlertCircleOutline = mdiAlertCircleOutline
+    mdiContentSave = mdiContentSave
+    mdiFileUpload = mdiFileUpload
+    mdiClose = mdiClose
+    mdiCloseThick = mdiCloseThick
+
     topbarHeight = topbarHeight
 
     showEmergencyStopDialog = false

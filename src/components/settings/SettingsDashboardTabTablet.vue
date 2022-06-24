@@ -1,10 +1,3 @@
-<style scoped>
-.ghost {
-    opacity: 0.5;
-    background: #c8ebfb;
-}
-</style>
-
 <template>
     <v-card flat>
         <v-card-text>
@@ -14,45 +7,45 @@
                         <v-list dense>
                             <v-list-item>
                                 <v-row>
-                                    <v-col class="col-auto pr-0">
-                                        <v-icon>mdi-information</v-icon>
+                                    <v-col class="col-auto pr-0 pl-8">
+                                        <v-icon>{{ mdiInformation }}</v-icon>
                                     </v-col>
-                                    <v-col>
+                                    <v-col class="pr-0 text-truncate">
                                         {{ $t('Panels.StatusPanel.Headline') }}
                                     </v-col>
-                                    <v-col class="col-auto">
-                                        <v-icon color="grey lighten-1">mdi-lock</v-icon>
+                                    <v-col class="col-auto pl-0">
+                                        <v-icon color="grey lighten-1">{{ mdiLock }}</v-icon>
                                     </v-col>
                                 </v-row>
                             </v-list-item>
                             <draggable
                                 v-model="tabletLayout1"
-                                :handle="isMobile ? '.handle' : ''"
+                                handle=".handle"
                                 class="v-list-item-group"
                                 ghost-class="ghost"
                                 group="tabletViewport">
                                 <template v-for="element in tabletLayout1">
-                                    <v-list-item :key="'item-tablet-' + element.name" link>
-                                        <v-row>
-                                            <v-col class="col-auto pr-0">
-                                                <v-icon v-if="isMobile" class="handle">mdi-arrow-up-down</v-icon>
-                                                <v-icon v-else v-text="convertPanelnameToIcon(element.name)"></v-icon>
+                                    <v-list-item :key="'item-tablet-' + element.name">
+                                        <v-row class="d-flex align-center">
+                                            <v-col class="col-auto px-0">
+                                                <v-icon class="handle pr-2">{{ mdiDragVertical }}</v-icon>
+                                                <v-icon v-text="convertPanelnameToIcon(element.name)"></v-icon>
                                             </v-col>
-                                            <v-col class="pr-0">
+                                            <v-col class="pr-0 text-truncate">
                                                 {{ getPanelName(element.name) }}
                                             </v-col>
-                                            <v-col class="col-auto pl-0">
+                                            <v-col class="col-auto pl-2">
                                                 <v-icon
                                                     v-if="!element.visible"
                                                     color="grey lighten-1"
                                                     @click.stop="changeState1(element.name, true)">
-                                                    mdi-checkbox-blank-outline
+                                                    {{ mdiCheckboxBlankOutline }}
                                                 </v-icon>
                                                 <v-icon
                                                     v-else
                                                     color="primary"
                                                     @click.stop="changeState1(element.name, false)">
-                                                    mdi-checkbox-marked
+                                                    {{ mdiCheckboxMarked }}
                                                 </v-icon>
                                             </v-col>
                                         </v-row>
@@ -67,32 +60,32 @@
                         <v-list dense>
                             <draggable
                                 v-model="tabletLayout2"
-                                :handle="isMobile ? '.handle' : ''"
+                                handle=".handle"
                                 class="v-list-item-group"
                                 ghost-class="ghost"
                                 group="tabletViewport">
                                 <template v-for="element in tabletLayout2">
-                                    <v-list-item :key="'item-tablet-' + element.name" link>
-                                        <v-row>
-                                            <v-col class="col-auto pr-0">
-                                                <v-icon v-if="isMobile" class="handle">mdi-arrow-up-down</v-icon>
-                                                <v-icon v-else v-text="convertPanelnameToIcon(element.name)"></v-icon>
+                                    <v-list-item :key="'item-tablet-' + element.name">
+                                        <v-row class="d-flex align-center">
+                                            <v-col class="col-auto px-0">
+                                                <v-icon class="handle pr-2">{{ mdiDragVertical }}</v-icon>
+                                                <v-icon v-text="convertPanelnameToIcon(element.name)"></v-icon>
                                             </v-col>
-                                            <v-col class="pr-0">
+                                            <v-col class="pr-0 text-truncate">
                                                 {{ getPanelName(element.name) }}
                                             </v-col>
-                                            <v-col class="col-auto pl-0">
+                                            <v-col class="col-auto pl-2">
                                                 <v-icon
                                                     v-if="!element.visible"
                                                     color="grey lighten-1"
                                                     @click.stop="changeState2(element.name, true)">
-                                                    mdi-checkbox-blank-outline
+                                                    {{ mdiCheckboxBlankOutline }}
                                                 </v-icon>
                                                 <v-icon
                                                     v-else
                                                     color="primary"
                                                     @click.stop="changeState2(element.name, false)">
-                                                    mdi-checkbox-marked
+                                                    {{ mdiCheckboxMarked }}
                                                 </v-icon>
                                             </v-col>
                                         </v-row>
@@ -117,19 +110,29 @@ import Component from 'vue-class-component'
 import { Mixins } from 'vue-property-decorator'
 import DashboardMixin from '@/components/mixins/dashboard'
 import draggable from 'vuedraggable'
-import { capitalize, convertPanelnameToIcon } from '@/plugins/helpers'
+import { convertPanelnameToIcon } from '@/plugins/helpers'
+import { mdiLock, mdiInformation, mdiDragVertical, mdiCheckboxMarked, mdiCheckboxBlankOutline } from '@mdi/js'
 @Component({
     components: {
         draggable,
     },
 })
 export default class SettingsDashboardTabTablet extends Mixins(DashboardMixin) {
-    capitalize = capitalize
+    /**
+     * Icons
+     */
+    mdiLock = mdiLock
+    mdiInformation = mdiInformation
+    mdiDragVertical = mdiDragVertical
+    mdiCheckboxMarked = mdiCheckboxMarked
+    mdiCheckboxBlankOutline = mdiCheckboxBlankOutline
+
     convertPanelnameToIcon = convertPanelnameToIcon
 
     get tabletLayout1() {
         let panels = this.$store.getters['gui/getPanels']('tabletLayout1')
         panels = panels.concat(this.missingPanelsTablet)
+        panels = panels.filter((element: any) => this.allPossiblePanels.includes(element.name))
 
         return panels
     }
@@ -141,7 +144,10 @@ export default class SettingsDashboardTabTablet extends Mixins(DashboardMixin) {
     }
 
     get tabletLayout2() {
-        return this.$store.getters['gui/getPanels']('tabletLayout2')
+        let panels = this.$store.getters['gui/getPanels']('tabletLayout2')
+        panels = panels.filter((element: any) => this.allPossiblePanels.includes(element.name))
+
+        return panels
     }
 
     set tabletLayout2(newVal) {
@@ -172,3 +178,14 @@ export default class SettingsDashboardTabTablet extends Mixins(DashboardMixin) {
     }
 }
 </script>
+
+<style scoped>
+.ghost {
+    opacity: 0.5;
+    background: #c8ebfb;
+}
+
+.handle {
+    cursor: move;
+}
+</style>

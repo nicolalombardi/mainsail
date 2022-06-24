@@ -2,62 +2,48 @@
 <style>
 .viewer {
     width: 100%;
-    height: calc(var(--app-height) - 266px);
+    height: calc(var(--app-height) - 240px);
     border: 1px solid #3f3f3f;
 }
 
-.slider-autoheight,
-.slider-autoheight .v-slider {
-    height: calc(var(--app-height) - 286px);
+.withScrubber .viewer {
+    height: calc(var(--app-height) - 300px);
 }
 
 @media (min-width: 600px) and (max-width: 959px) {
     .viewer {
-        height: calc(var(--app-height) - 318px);
+        height: calc(var(--app-height) - 295px);
     }
-    .slider-autoheight,
-    .slider-autoheight .v-slider {
-        height: calc(var(--app-height) - 338px);
+
+    .withScrubber .viewer {
+        height: calc(var(--app-height) - 360px);
     }
 }
 
 @media (max-width: 599px) {
     .viewer {
-        height: calc(var(--app-height) - 356px);
+        height: calc(var(--app-height) - 340px);
     }
-    .slider-autoheight,
-    .slider-autoheight .v-slider {
-        height: calc(var(--app-height) - 376px);
-    }
-}
 
-.slider-autoheight .v-slider {
-    margin-top: 0;
-    margin-bottom: 0;
-}
-.slider-autoheight .v-input__slot {
-    height: 100%;
+    .withScrubber .viewer {
+        height: calc(var(--app-height) - 340px);
+    }
 }
 </style>
 
 <style scoped>
-.progress-text {
-    font-size: small;
-}
-
-.progress-container {
-    position: absolute;
-    width: 80.5%;
-}
-
-.disable-transition {
-    transition: none !important;
+.scrubber {
+    position: relative;
+    left: 0;
+    right: 0;
+    bottom: 5px;
+    z-index: 19 !important;
 }
 </style>
 
 <template>
     <div>
-        <panel :title="$t('GCodeViewer.Title')" icon="mdi-video-3d" card-class="gcode-viewer-panel">
+        <panel :title="panelTitle" :icon="mdiVideo3d" card-class="gcode-viewer-panel" :margin-bottom="false">
             <template #buttons>
                 <v-btn
                     v-show="reloadRequired"
@@ -68,24 +54,43 @@
                     class="ml-3"
                     @click="reloadViewer">
                     <span class="d-none d-sm-block">{{ $t('GCodeViewer.ReloadRequired') }}</span>
-                    <v-icon class="d-sm-none">mdi-reload-alert</v-icon>
+                    <v-icon class="d-sm-none">{{ mdiReloadAlert }}</v-icon>
                 </v-btn>
-                <v-btn icon tile @click="resetCamera"><v-icon>mdi-camera-retake</v-icon></v-btn>
+                <v-btn icon tile @click="resetCamera">
+                    <v-icon>{{ mdiCameraRetake }}</v-icon>
+                </v-btn>
             </template>
             <v-card-text>
-                <v-row>
+                <v-row :class="showScrubber ? 'withScrubber' : ''">
                     <v-col>
                         <div ref="viewerCanvasContainer"></div>
                     </v-col>
-                    <v-col class="col-auto pr-6">
+                </v-row>
+                <v-row v-show="showScrubber" class="scrubber">
+                    <v-col class="pt-0">
                         <v-slider
-                            vertical
-                            :disabled="loading || !loadedFile"
-                            :max="maxZSlider"
-                            :min="0"
-                            :value="zSlider"
-                            class="slider-autoheight mt-3"
-                            @input="updateZSlider"></v-slider>
+                            v-model="scrubPosition"
+                            :hint="scrubPosition + '/' + scrubFileSize"
+                            :max="scrubFileSize"
+                            dense
+                            min="0"
+                            persistent-hint></v-slider>
+                    </v-col>
+                    <v-col class="col-auto pt-0 text-center">
+                        <v-btn class="px-2 minwidth-0" color="primary" @click="scrubPlaying = !scrubPlaying">
+                            <v-icon v-if="scrubPlaying">{{ mdiPause }}</v-icon>
+                            <v-icon v-else>{{ mdiPlay }}</v-icon>
+                        </v-btn>
+                        <v-btn class="px-2 minwidth-0 mx-3" color="primary" @click="fastForward">
+                            <v-icon>{{ mdiFastForward }}</v-icon>
+                        </v-btn>
+                        <v-btn-toggle v-model="scrubSpeed" class="mt-3 mt-sm-0" dense mandatory rounded>
+                            <v-btn :value="1">1x</v-btn>
+                            <v-btn :value="2">2x</v-btn>
+                            <v-btn :value="5">5x</v-btn>
+                            <v-btn :value="10">10x</v-btn>
+                            <v-btn :value="20">20x</v-btn>
+                        </v-btn-toggle>
                     </v-col>
                 </v-row>
                 <v-row class="mt-0 d-flex align-top">
@@ -107,12 +112,13 @@
                                     <v-btn v-if="showTrackingButton" class="mr-3" @click="tracking = !tracking">
                                         <v-icon
                                             class="mr-2"
-                                            v-html="
-                                                tracking ? 'mdi-toggle-switch' : 'mdi-toggle-switch-off-outline'
-                                            "></v-icon>
+                                            v-html="tracking ? mdiToggleSwitch : mdiToggleSwitchOffOutline"></v-icon>
                                         {{ $t('GCodeViewer.Tracking') }}
                                     </v-btn>
-                                    <v-btn @click="clearLoadedFile">{{ $t('GCodeViewer.ClearLoadedFile') }}</v-btn>
+                                    <v-btn @click="clearLoadedFile">
+                                        <v-icon left>{{ mdiBroom }}</v-icon>
+                                        {{ $t('GCodeViewer.ClearLoadedFile') }}
+                                    </v-btn>
                                 </template>
                             </v-col>
                             <v-col class="col-12 col-sm-6 col-md-4">
@@ -125,7 +131,7 @@
                                     hide-details
                                     outlined></v-select>
                             </v-col>
-                            <v-col order-md="3" class="col-12 col-sm-6 col-md-4">
+                            <v-col order-md="3" class="col-12 col-sm-6 col-md-4 d-flex">
                                 <v-select
                                     v-model="renderQuality"
                                     :items="renderQualities"
@@ -134,82 +140,82 @@
                                     dense
                                     hide-details
                                     outlined></v-select>
+                                <v-menu
+                                    :offset-y="true"
+                                    :offset-x="true"
+                                    top
+                                    :close-on-content-click="false"
+                                    :title="$t('Files.SetupCurrentList')">
+                                    <template #activator="{ on, attrs }">
+                                        <v-btn class="minwidth-0 px-2 ml-3" v-bind="attrs" v-on="on">
+                                            <v-icon>{{ mdiCog }}</v-icon>
+                                        </v-btn>
+                                    </template>
+                                    <v-list>
+                                        <v-list-item class="minHeight36">
+                                            <v-checkbox
+                                                v-model="showCursor"
+                                                class="mt-0"
+                                                hide-details
+                                                :label="$t('GCodeViewer.ShowToolhead')"></v-checkbox>
+                                        </v-list-item>
+                                        <v-list-item class="minHeight36">
+                                            <v-checkbox
+                                                v-model="showTravelMoves"
+                                                class="mt-0"
+                                                hide-details
+                                                :label="$t('GCodeViewer.ShowTravelMoves')"></v-checkbox>
+                                        </v-list-item>
+                                        <v-list-item
+                                            v-if="loadedFile === sdCardFilePath && printing_objects.length > 1"
+                                            class="minHeight36">
+                                            <v-checkbox
+                                                v-model="showObjectSelection"
+                                                class="mt-0"
+                                                hide-details
+                                                :label="$t('GCodeViewer.ShowObjectSelection')"></v-checkbox>
+                                        </v-list-item>
+                                        <v-divider></v-divider>
+                                        <v-list-item class="minHeight36">
+                                            <v-checkbox
+                                                v-model="hdRendering"
+                                                class="mt-0"
+                                                hide-details
+                                                :label="$t('GCodeViewer.HDRendering')"></v-checkbox>
+                                        </v-list-item>
+                                        <v-list-item class="minHeight36">
+                                            <v-checkbox
+                                                v-model="forceLineRendering"
+                                                class="mt-0"
+                                                hide-details
+                                                :label="$t('GCodeViewer.ForceLineRendering')"></v-checkbox>
+                                        </v-list-item>
+                                        <v-list-item class="minHeight36">
+                                            <v-checkbox
+                                                v-model="transparency"
+                                                class="mt-0"
+                                                hide-details
+                                                :label="$t('GCodeViewer.Transparency')"></v-checkbox>
+                                        </v-list-item>
+                                        <v-list-item class="minHeight36">
+                                            <v-checkbox
+                                                v-model="voxelMode"
+                                                class="mt-0"
+                                                hide-details
+                                                :label="$t('GCodeViewer.VoxelMode')"></v-checkbox>
+                                        </v-list-item>
+                                        <v-list-item class="minHeight36">
+                                            <v-checkbox
+                                                v-model="specularLighting"
+                                                class="mt-0"
+                                                hide-details
+                                                :label="$t('GCodeViewer.SpecularLighting')"></v-checkbox>
+                                        </v-list-item>
+                                    </v-list>
+                                </v-menu>
                             </v-col>
                         </v-row>
                     </v-col>
-                    <v-menu
-                        :offset-y="true"
-                        :offset-x="true"
-                        top
-                        :close-on-content-click="false"
-                        :title="$t('Files.SetupCurrentList')">
-                        <template #activator="{ on, attrs }">
-                            <v-btn class="minwidth-0 px-2 mr-3 mt-3" v-bind="attrs" v-on="on">
-                                <v-icon>mdi-cog</v-icon>
-                            </v-btn>
-                        </template>
-                        <v-list>
-                            <v-list-item class="minHeight36">
-                                <v-checkbox
-                                    v-model="showCursor"
-                                    class="mt-0"
-                                    hide-details
-                                    :label="$t('GCodeViewer.ShowToolhead')"></v-checkbox>
-                            </v-list-item>
-                            <v-list-item class="minHeight36">
-                                <v-checkbox
-                                    v-model="showTravelMoves"
-                                    class="mt-0"
-                                    hide-details
-                                    :label="$t('GCodeViewer.ShowTravelMoves')"></v-checkbox>
-                            </v-list-item>
-                            <v-list-item
-                                v-if="loadedFile === sdCardFilePath && printing_objects.length > 1"
-                                class="minHeight36">
-                                <v-checkbox
-                                    v-model="showObjectSelection"
-                                    class="mt-0"
-                                    hide-details
-                                    :label="$t('GCodeViewer.ShowObjectSelection')"></v-checkbox>
-                            </v-list-item>
-                            <v-divider></v-divider>
-                            <v-list-item class="minHeight36">
-                                <v-checkbox
-                                    v-model="hdRendering"
-                                    class="mt-0"
-                                    hide-details
-                                    :label="$t('GCodeViewer.HDRendering')"></v-checkbox>
-                            </v-list-item>
-                            <v-list-item class="minHeight36">
-                                <v-checkbox
-                                    v-model="forceLineRendering"
-                                    class="mt-0"
-                                    hide-details
-                                    :label="$t('GCodeViewer.ForceLineRendering')"></v-checkbox>
-                            </v-list-item>
-                            <v-list-item class="minHeight36">
-                                <v-checkbox
-                                    v-model="transparency"
-                                    class="mt-0"
-                                    hide-details
-                                    :label="$t('GCodeViewer.Transparency')"></v-checkbox>
-                            </v-list-item>
-                            <v-list-item class="minHeight36">
-                                <v-checkbox
-                                    v-model="voxelMode"
-                                    class="mt-0"
-                                    hide-details
-                                    :label="$t('GCodeViewer.VoxelMode')"></v-checkbox>
-                            </v-list-item>
-                            <v-list-item class="minHeight36">
-                                <v-checkbox
-                                    v-model="specularLighting"
-                                    class="mt-0"
-                                    hide-details
-                                    :label="$t('GCodeViewer.SpecularLighting')"></v-checkbox>
-                            </v-list-item>
-                        </v-list>
-                    </v-menu>
                 </v-row>
                 <input
                     ref="fileInput"
@@ -219,6 +225,7 @@
                     type="file"
                     @change="fileSelected" />
             </v-card-text>
+            <resize-observer @notify="handleResize" />
         </panel>
         <v-snackbar v-model="loading" :timeout="-1" :value="true" fixed right bottom dark>
             <div>
@@ -229,7 +236,7 @@
             <v-progress-linear class="mt-2" :value="loadingPercent"></v-progress-linear>
             <template #action="{ attrs }">
                 <v-btn color="red" text v-bind="attrs" style="min-width: auto" @click="cancelRendering()">
-                    <v-icon class="0">mdi-close</v-icon>
+                    <v-icon class="0">{{ mdiClose }}</v-icon>
                 </v-btn>
             </template>
         </v-snackbar>
@@ -253,7 +260,7 @@
             </template>
             <template #action="{ attrs }">
                 <v-btn color="red" text v-bind="attrs" style="min-width: auto" @click="cancelDownload">
-                    <v-icon class="0">mdi-close</v-icon>
+                    <v-icon class="0">{{ mdiClose }}</v-icon>
                 </v-btn>
             </template>
         </v-snackbar>
@@ -267,6 +274,20 @@ import GCodeViewer from '@sindarius/gcodeviewer'
 import axios from 'axios'
 import { formatFilesize } from '@/plugins/helpers'
 import Panel from '@/components/ui/Panel.vue'
+import {
+    mdiCameraRetake,
+    mdiCog,
+    mdiClose,
+    mdiReloadAlert,
+    mdiToggleSwitch,
+    mdiToggleSwitchOffOutline,
+    mdiVideo3d,
+    mdiPlay,
+    mdiPause,
+    mdiFastForward,
+    mdiBroom,
+} from '@mdi/js'
+import { Debounce } from 'vue-debounce-decorator'
 
 interface downloadSnackbar {
     status: boolean
@@ -286,6 +307,21 @@ let viewer: any = null
     components: { Panel },
 })
 export default class Viewer extends Mixins(BaseMixin) {
+    /**
+     * Icons
+     */
+    mdiReloadAlert = mdiReloadAlert
+    mdiCameraRetake = mdiCameraRetake
+    mdiToggleSwitch = mdiToggleSwitch
+    mdiToggleSwitchOffOutline = mdiToggleSwitchOffOutline
+    mdiClose = mdiClose
+    mdiCog = mdiCog
+    mdiVideo3d = mdiVideo3d
+    mdiPlay = mdiPlay
+    mdiPause = mdiPause
+    mdiFastForward = mdiFastForward
+    mdiBroom = mdiBroom
+
     formatFilesize = formatFilesize
 
     private isBusy = false
@@ -297,10 +333,13 @@ export default class Viewer extends Mixins(BaseMixin) {
 
     private reloadRequired = false
     private fileSize = 0
-    private maxZSlider = 100000
-    private zSlider = this.maxZSlider
-    private zSlicerHeight = 100
     private renderQuality = this.renderQualities[2]
+
+    private scrubPosition = 0
+    private scrubPlaying = false
+    private scrubSpeed = 1
+    private scrubInterval: ReturnType<typeof setInterval> | undefined = undefined
+    private scrubFileSize = 0
 
     private downloadSnackbar: downloadSnackbar = {
         status: false,
@@ -336,10 +375,9 @@ export default class Viewer extends Mixins(BaseMixin) {
     async mounted() {
         this.loadedFile = this.$store.state.gcodeviewer?.loadedFileBackup ?? null
         viewer = this.$store.state.gcodeviewer?.viewerBackup ?? null
-
         await this.init()
 
-        window.addEventListener('resize', this.eventListenerResize)
+        if (this.loadedFile !== null) this.scrubFileSize = viewer.fileSize
     }
 
     beforeDestroy() {
@@ -349,11 +387,26 @@ export default class Viewer extends Mixins(BaseMixin) {
             this.$store.dispatch('gcodeviewer/setViewerBackup', viewer)
         }
 
-        window.removeEventListener('resize', this.eventListenerResize)
+        this.scrubPlaying = false
+        if (this.scrubInterval) {
+            clearInterval(this.scrubInterval)
+            this.scrubInterval = undefined
+        }
     }
 
-    eventListenerResize() {
-        viewer?.resize()
+    @Debounce(200)
+    handleResize() {
+        this.$nextTick(() => {
+            viewer?.resize()
+        })
+    }
+
+    get panelTitle() {
+        let title = this.$t('GCodeViewer.Title').toString()
+
+        if (this.loadedFile) title += `: ${this.loadedFile}`
+
+        return title
     }
 
     get filePosition() {
@@ -399,22 +452,20 @@ export default class Viewer extends Mixins(BaseMixin) {
             }
         }
 
-        if (viewer === null) {
-            await this.viewerInit(canvasElement)
-        }
+        if (viewer === null) await this.viewerInit(canvasElement)
 
         this.registerProgressCallback()
 
         if (this.$route.query?.filename && this.loadedFile !== this.$route.query?.filename?.toString()) {
             //TODO: test without sleep
-            await this.sleep(1000) //Give the store a chance to initializ before loading the file.
+            await this.sleep(1000) //Give the store a chance to initialize before loading the file.
             await this.loadFile(this.$route.query.filename.toString())
         }
     }
 
-    viewerInit(element: HTMLCanvasElement) {
+    async viewerInit(element: HTMLCanvasElement) {
         viewer = new GCodeViewer(element)
-        viewer.init()
+        await viewer.init()
         viewer.setBackgroundColor(this.backgroundColor)
         viewer.bed.setBedColor(this.gridColor)
         viewer.setCursorVisiblity(this.showCursor)
@@ -470,6 +521,8 @@ export default class Viewer extends Mixins(BaseMixin) {
 
     clearLoadedFile() {
         if (viewer) {
+            this.scrubPlaying = false
+            this.scrubFileSize = 0
             viewer.clearScene(true)
             this.loadedFile = null
             this.tracking = false
@@ -483,8 +536,6 @@ export default class Viewer extends Mixins(BaseMixin) {
     }
 
     finishLoad() {
-        this.maxZSlider = viewer.getMaxHeight() + 1
-        this.zSlider = this.maxZSlider
         this.loading = false
         viewer.setCursorVisiblity(this.showCursor)
 
@@ -506,6 +557,7 @@ export default class Viewer extends Mixins(BaseMixin) {
             viewer.buildObjects.loadObjectBoundaries(objects)
             viewer.buildObjects.showObjectSelection(this.showObjectSelection)
         }
+        this.scrubFileSize = viewer.fileSize
 
         viewer.gcodeProcessor.updateFilePosition(viewer.fileSize)
     }
@@ -568,6 +620,7 @@ export default class Viewer extends Mixins(BaseMixin) {
         await viewer.processFile(text)
         this.loadingPercent = 100
         this.finishLoad()
+        this.scrubFileSize = viewer.fileSize
     }
 
     cancelDownload() {
@@ -647,8 +700,7 @@ export default class Viewer extends Mixins(BaseMixin) {
     async trackingChanged(newVal: boolean) {
         if (!viewer) return
         if (newVal) {
-            //Set zSlider to max value
-            this.zSlider = this.maxZSlider
+            this.scrubPlaying = false
             //Force renderers reload.
             viewer.gcodeProcessor.updateFilePosition(0)
             viewer?.forceRender()
@@ -916,7 +968,27 @@ export default class Viewer extends Mixins(BaseMixin) {
     }
 
     get kinematics() {
-        return this.$store.state.printer.configfile?.settings?.printer?.kinematics ?? ''
+        return (
+            this.$store.state.printer.configfile?.settings?.printer?.kinematics ??
+            this.$store.state.gui?.gcodeViewer?.klipperCache?.kinematics ??
+            ''
+        )
+    }
+
+    get bedMaxSize() {
+        return (
+            this.$store.state.printer.toolhead?.axis_maximum ??
+            this.$store.state.gui?.gcodeViewer?.klipperCache?.axis_maximum ??
+            null
+        )
+    }
+
+    get bedMinSize() {
+        return (
+            this.$store.state.printer.toolhead?.axis_minimum ??
+            this.$store.state.gui?.gcodeViewer?.klipperCache?.axis_minimum ??
+            null
+        )
     }
 
     @Watch('kinematics')
@@ -924,10 +996,6 @@ export default class Viewer extends Mixins(BaseMixin) {
         if (viewer && newVal) {
             viewer.bed.setDelta(newVal.includes('delta'))
         }
-    }
-
-    get bedMinSize() {
-        return this.$store.state.printer.toolhead?.axis_minimum ?? null
     }
 
     @Watch('bedMinSize', { deep: true })
@@ -939,10 +1007,6 @@ export default class Viewer extends Mixins(BaseMixin) {
         }
     }
 
-    get bedMaxSize() {
-        return this.$store.state.printer.toolhead?.axis_maximum ?? null
-    }
-
     @Watch('bedMaxSize', { deep: true })
     bedMaxSizeChanged(newVal: number[] | null) {
         if (newVal && viewer) {
@@ -950,12 +1014,6 @@ export default class Viewer extends Mixins(BaseMixin) {
             viewer.bed.buildVolume['y'].max = newVal[1]
             viewer.bed.buildVolume['z'].max = newVal[2]
         }
-    }
-
-    @Watch('zSlider')
-    zSliderChanged(newVal: number) {
-        viewer?.setZClipPlane(newVal, -1)
-        viewer?.forceRender()
     }
 
     get progressColor() {
@@ -967,8 +1025,46 @@ export default class Viewer extends Mixins(BaseMixin) {
         viewer?.setProgressColor(newVal)
     }
 
-    updateZSlider(newVal: any) {
-        this.zSlider = newVal
+    @Watch('scrubPlaying')
+    scrubPlayingChanged(to: boolean): void {
+        if (to) {
+            if (this.scrubInterval) {
+                clearInterval(this.scrubInterval)
+                this.scrubInterval = undefined
+            }
+            this.scrubPlaying = true
+            if (this.scrubPosition >= this.scrubFileSize) {
+                this.scrubPosition = 0
+            }
+
+            viewer.gcodeProcessor.updateFilePosition(this.scrubPosition - 30000)
+            this.scrubInterval = setInterval(() => {
+                this.scrubPosition += 100 * this.scrubSpeed
+                viewer.gcodeProcessor.updateFilePosition(this.scrubPosition)
+                if (this.tracking || this.scrubPosition >= this.scrubFileSize) {
+                    this.scrubPlaying = false
+                }
+            }, 200)
+        } else {
+            if (this.scrubInterval) clearInterval(this.scrubInterval)
+            this.scrubPlaying = false
+            this.scrubInterval = undefined
+        }
+    }
+
+    get showScrubber() {
+        return !this.tracking && this.scrubFileSize > 0
+    }
+
+    @Debounce(200)
+    @Watch('scrubPosition')
+    updateScrubPosition(to: number): void {
+        if (!this.tracking) viewer.gcodeProcessor.updateFilePosition(to)
+    }
+
+    fastForward(): void {
+        this.scrubPosition = this.scrubFileSize
+        viewer.gcodeProcessor.updateFilePosition(this.scrubPosition)
     }
 }
 </script>

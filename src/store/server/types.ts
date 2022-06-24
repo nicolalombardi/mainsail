@@ -24,7 +24,16 @@ export interface ServerState {
         distribution: ServerStateDistribution
         sd_info: ServerStateSdInfo
         service_state: ServerStateServiceStates
+        python: {
+            version: string[]
+            version_string: string
+        }
+        network: {
+            [key: string]: ServerStateNetwork
+        }
+        system_uptime: number | null
     } | null
+    system_boot_at: Date | null
     moonraker_stats: {
         cpu_usage: number
         mem_units: string
@@ -35,6 +44,12 @@ export interface ServerState {
     throttled_state: {
         bits: number
         flags: string[]
+    }
+    network_stats: {
+        [name: string]: ServerStateNetworkInterface
+    }
+    system_cpu_usage: {
+        [name: string]: number
     }
     dbNamespaces: string[]
     websocket_count: number
@@ -106,4 +121,22 @@ export interface ServerStateServiceStates {
 export interface ServerStateServiceState {
     active_state: string
     sub_state: string
+}
+
+export interface ServerStateNetwork {
+    mac_address: string
+    ip_addresses: ServerStateNetworkIpaddresses[]
+}
+
+export interface ServerStateNetworkIpaddresses {
+    family: 'ipv4' | 'ipv6'
+    address: string
+    is_link_local: boolean
+}
+
+export interface ServerStateNetworkInterface {
+    bandwidth: number
+    rx_bytes: number
+    tx_bytes: number
+    details?: ServerStateNetwork
 }

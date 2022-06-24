@@ -1,7 +1,9 @@
 <style scoped>
 ._spin_button_group {
     width: 24px;
-    margin: -6px -6px 0 -6px;
+    margin-top: -6px;
+    margin-left: -6px;
+    margin-bottom: -6px;
 }
 
 .v-input--has-state {
@@ -13,25 +15,27 @@
     <form @submit.prevent="submit">
         <v-text-field
             v-model.number="value"
-            class="d-flex align-top"
             :label="label"
             :suffix="unit"
-            :append-icon="target !== defaultValue ? 'mdi-restart' : ''"
             :error="invalidInput()"
             :error-messages="inputErrors()"
             :disabled="disabled"
             :step="step"
             :min="min"
-            @blur="value = target"
             :max="max"
-            @click:append="resetToDefault"
             :dec="dec"
-            @keydown="checkInvalidChars"
             type="number"
             hide-spin-buttons
             hide-details="auto"
             outlined
-            dense>
+            dense
+            class="d-flex align-top"
+            @blur="value = target"
+            @focus="$event.target.select()"
+            @keydown="checkInvalidChars">
+            <template v-if="defaultValue" #append>
+                <v-icon @click="resetToDefault">{{ value !== defaultValue ? mdiRestart : '' }}</v-icon>
+            </template>
             <template v-if="hasSpinner" #append-outer>
                 <div class="_spin_button_group">
                     <v-btn
@@ -41,7 +45,7 @@
                         plain
                         small
                         @click="incrementValue">
-                        <v-icon>mdi-chevron-up</v-icon>
+                        <v-icon>{{ mdiChevronUp }}</v-icon>
                     </v-btn>
                     <v-btn
                         :disabled="value <= min || error || disabled"
@@ -50,7 +54,7 @@
                         plain
                         small
                         @click="decrementValue">
-                        <v-icon>mdi-chevron-down</v-icon>
+                        <v-icon>{{ mdiChevronDown }}</v-icon>
                     </v-btn>
                 </div>
             </template>
@@ -62,9 +66,14 @@
 import Component from 'vue-class-component'
 import { Mixins, Prop, Watch } from 'vue-property-decorator'
 import BaseMixin from '@/components/mixins/base'
+import { mdiChevronDown, mdiChevronUp, mdiRestart } from '@mdi/js'
 
 @Component
 export default class NumberInput extends Mixins(BaseMixin) {
+    mdiRestart = mdiRestart
+    mdiChevronUp = mdiChevronUp
+    mdiChevronDown = mdiChevronDown
+
     private value: number = 0
     private error: boolean = false
     private invalidChars: string[] = ['e', 'E', '+']
@@ -77,26 +86,26 @@ export default class NumberInput extends Mixins(BaseMixin) {
     declare readonly param: string
 
     // props defining incoming data
-    @Prop({ type: Number, required: true, default: 0 })
+    @Prop({ type: Number, required: true })
     declare readonly target: number
 
-    @Prop({ type: Number, required: true, default: 0 })
+    @Prop({ type: Number, required: false })
     declare readonly defaultValue: number
 
     // props for internal processing
-    @Prop({ type: Number, required: true, default: 0 })
+    @Prop({ type: Number, required: true })
     declare readonly min: number
 
     @Prop({ type: Number, default: null })
     declare readonly max: number | null
 
-    @Prop({ type: Number, required: true, default: 0 })
+    @Prop({ type: Number, required: true })
     declare readonly dec: number
 
     @Prop({ type: Number, required: false, default: 1 })
     declare readonly step: number
 
-    @Prop({ type: String, required: true })
+    @Prop({ type: String, required: false })
     declare readonly unit: string
 
     // spinner related props
@@ -147,8 +156,7 @@ export default class NumberInput extends Mixins(BaseMixin) {
 
     submit(): void {
         if (this.invalidInput()) return
-        this.$emit('target-changed', this.param, this.value)
-        this.$emit('submit', this.param)
+        this.$emit('submit', { name: this.param, value: this.value })
     }
 
     // input validation //

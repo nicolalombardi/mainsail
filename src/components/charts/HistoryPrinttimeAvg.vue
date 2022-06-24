@@ -95,19 +95,12 @@ export default class HistoryPrinttimeAvg extends Mixins(BaseMixin) {
     }
 
     get chart(): ECharts | null {
-        const historyPrinttimeAvg = this.$refs.historyPrinttimeAvg
-        return historyPrinttimeAvg?.inst ?? null
+        return this.$refs.historyPrinttimeAvg?.chart ?? null
     }
 
     mounted() {
         this.chartOptions.series[0].data = this.printtimeAvgArray
         this.chart?.setOption(this.chartOptions)
-
-        window.addEventListener('resize', this.eventListenerResize)
-    }
-
-    destroyed() {
-        window.removeEventListener('resize', this.eventListenerResize)
     }
 
     beforeDestroy() {
@@ -117,19 +110,19 @@ export default class HistoryPrinttimeAvg extends Mixins(BaseMixin) {
 
     @Watch('printtimeAvgArray')
     printtimeAvgArrayChanged(newVal: any) {
-        this.chart?.setOption({
-            series: {
-                data: newVal,
+        this.chart?.setOption(
+            {
+                series: {
+                    data: newVal,
+                },
             },
-        })
+            false,
+            true
+        )
     }
 
     visibilityChanged(isVisible: boolean) {
         if (isVisible) this.chart?.resize()
-    }
-
-    eventListenerResize() {
-        this.chart?.resize()
     }
 }
 </script>

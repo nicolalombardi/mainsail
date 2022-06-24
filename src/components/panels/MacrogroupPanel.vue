@@ -3,7 +3,7 @@
 <template>
     <panel
         v-if="klipperReadyForGui && macros.length > 0 && macrogroupStatus"
-        icon="mdi-code-tags"
+        :icon="mdiCodeTags"
         :title="macrogroup.name"
         :collapsible="true"
         :card-class="'macrogroup_' + panelId + '_panel'">
@@ -29,10 +29,13 @@ import Panel from '@/components/ui/Panel.vue'
 import MacroButton from '@/components/inputs/MacroButton.vue'
 import { PrinterStateMacro } from '@/store/printer/types'
 import { GuiMacrosStateMacrogroupMacro } from '@/store/gui/macros/types'
+import { mdiCodeTags } from '@mdi/js'
 @Component({
     components: { MacroButton, Panel },
 })
 export default class MacrogroupPanel extends Mixins(BaseMixin) {
+    mdiCodeTags = mdiCodeTags
+
     @Prop({ required: true }) declare panelId: string
 
     get macrogroup() {
@@ -40,7 +43,7 @@ export default class MacrogroupPanel extends Mixins(BaseMixin) {
     }
 
     get allMacros() {
-        return this.$store.getters['printer/getAllMacros'] ?? []
+        return this.$store.getters['printer/getMacros'] ?? []
     }
 
     get macros() {

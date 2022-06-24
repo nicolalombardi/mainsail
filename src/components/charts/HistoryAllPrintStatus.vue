@@ -3,6 +3,7 @@
         ref="historyAllPrintStatus"
         v-observe-visibility="visibilityChanged"
         :option="chartOptions"
+        :autoresize="true"
         :init-options="{ renderer: 'svg' }"
         style="height: 250px; width: 100%"></e-chart>
 </template>
@@ -12,6 +13,8 @@ import Component from 'vue-class-component'
 import { Mixins, Watch } from 'vue-property-decorator'
 import BaseMixin from '@/components/mixins/base'
 import type { ECharts } from 'echarts/core'
+import { ECBasicOption } from 'echarts/types/dist/shared'
+import { ServerHistoryStateAllPrintStatusEntry } from '@/store/server/history/types'
 
 @Component({
     components: {},
@@ -21,7 +24,7 @@ export default class HistoryAllPrintStatus extends Mixins(BaseMixin) {
         historyAllPrintStatus: any
     }
 
-    private chartOptions: any = {
+    private chartOptions: ECBasicOption = {
         darkMode: true,
         animation: false,
         grid: {
@@ -64,23 +67,25 @@ export default class HistoryAllPrintStatus extends Mixins(BaseMixin) {
     }
 
     get printStatusArray() {
-        return this.selectedJobs.length ? this.selectedPrintStatusArray : this.allPrintStatusArray
+        const output: ServerHistoryStateAllPrintStatusEntry[] = []
+        const orgArray = this.selectedJobs.length ? this.selectedPrintStatusArray : this.allPrintStatusArray
+
+        orgArray.forEach((status: ServerHistoryStateAllPrintStatusEntry) => {
+            const tmp = { ...status }
+            tmp.name = status.displayName
+            output.push(tmp)
+        })
+
+        return output
     }
 
     get chart(): ECharts | null {
-        const historyAllPrintStatus = this.$refs.historyAllPrintStatus
-        return historyAllPrintStatus?.inst ?? null
+        return this.$refs.historyAllPrintStatus?.chart ?? null
     }
 
     mounted() {
         this.chartOptions.series[0].data = this.printStatusArray
         this.chart?.setOption(this.chartOptions)
-
-        window.addEventListener('resize', this.eventListenerResize)
-    }
-
-    destroyed() {
-        window.removeEventListener('resize', this.eventListenerResize)
     }
 
     beforeDestroy() {
@@ -90,19 +95,19 @@ export default class HistoryAllPrintStatus extends Mixins(BaseMixin) {
 
     @Watch('printStatusArray')
     printStatusArrayChanged(newVal: any) {
-        this.chart?.setOption({
-            series: {
-                data: newVal,
+        this.chart?.setOption(
+            {
+                series: {
+                    data: newVal,
+                },
             },
-        })
+            false,
+            true
+        )
     }
 
     visibilityChanged(isVisible: boolean) {
         if (isVisible) this.chart?.resize()
-    }
-
-    eventListenerResize() {
-        this.chart?.resize()
     }
 }
 </script>

@@ -7,7 +7,7 @@
                     <v-divider v-if="key" class="my-2"></v-divider>
                     <settings-row :title="preset.name" :sub-title="getSubTitle(preset)">
                         <v-btn small outlined class="ml-3" @click="editPreset(preset)">
-                            <v-icon left small>mdi-pencil</v-icon>
+                            <v-icon left small>{{ mdiPencil }}</v-icon>
                             {{ $t('Settings.Edit') }}
                         </v-btn>
                         <v-btn
@@ -16,14 +16,14 @@
                             class="ml-3 minwidth-0 px-2"
                             color="error"
                             @click="deletePreset(preset.id)">
-                            <v-icon small>mdi-delete</v-icon>
+                            <v-icon small>{{ mdiDelete }}</v-icon>
                         </v-btn>
                     </settings-row>
                 </div>
                 <v-divider v-if="presets.length" class="my-2"></v-divider>
-                <settings-row :title="$t('Settings.PresetsTab.Cooldown')">
+                <settings-row :title="$t('Settings.PresetsTab.Cooldown').toString()">
                     <v-btn small outlined class="ml-3" @click="editCooldown">
-                        <v-icon left small>mdi-pencil</v-icon>
+                        <v-icon left small>{{ mdiPencil }}</v-icon>
                         {{ $t('Settings.Edit') }}
                     </v-btn>
                 </settings-row>
@@ -47,13 +47,16 @@
                             <v-alert dense text type="error">{{ $t('Settings.PresetsTab.PresetInfo') }}</v-alert>
                         </v-col>
                     </v-row>
-                    <settings-row :title="$t('Settings.PresetsTab.Name')">
+                    <settings-row :title="$t('Settings.PresetsTab.Name').toString()">
                         <v-text-field
                             v-model="form.name"
+                            :placeholder="$t('Settings.PresetsTab.PresetNamePlaceholder')"
                             hide-details="auto"
                             :rules="[rules.required, rules.unique]"
+                            :append-icon="form.name !== '' ? mdiCloseCircle : {}"
                             dense
-                            outlined></v-text-field>
+                            outlined
+                            @click:append="form.name !== '' ? (form.name = '') : {}"></v-text-field>
                     </settings-row>
                     <div v-for="heater of heaters" :key="heater.name">
                         <v-divider class="my-2"></v-divider>
@@ -65,11 +68,13 @@
                             <v-text-field
                                 v-model="form.values[heater.name].value"
                                 hide-details="auto"
+                                :rules="[rules.invalid]"
                                 type="number"
                                 suffix="°C"
                                 dense
                                 outlined
-                                hide-spin-buttons></v-text-field>
+                                hide-spin-buttons
+                                @focus="$event.target.select()"></v-text-field>
                         </settings-row>
                     </div>
                     <div v-for="fan of temperatureFans" :key="'temperature_fan ' + fan.name">
@@ -82,15 +87,17 @@
                             <v-text-field
                                 v-model="form.values['temperature_fan ' + fan.name].value"
                                 hide-details="auto"
+                                :rules="[rules.invalid]"
                                 type="number"
                                 suffix="°C"
                                 dense
                                 outlined
-                                hide-spin-buttons></v-text-field>
+                                hide-spin-buttons
+                                @focus="$event.target.select()"></v-text-field>
                         </settings-row>
                     </div>
                     <v-divider class="my-2"></v-divider>
-                    <settings-row :title="$t('Settings.PresetsTab.CustomGCode')">
+                    <settings-row :title="$t('Settings.PresetsTab.CustomGCode').toString()">
                         <v-textarea v-model="form.gcode" outlined hide-details></v-textarea>
                     </settings-row>
                 </v-card-text>
@@ -98,7 +105,7 @@
                     <v-btn text @click="form.bool = false">
                         {{ $t('Settings.Cancel') }}
                     </v-btn>
-                    <v-btn color="primary" text type="submit">
+                    <v-btn color="primary" text type="submit" :disabled="!form.valid">
                         {{
                             form.id === null
                                 ? $t('Settings.PresetsTab.StoreButton')
@@ -112,7 +119,7 @@
             <v-form v-model="cooldownForm.valid" @submit.prevent="saveCooldown">
                 <v-card-title>{{ $t('Settings.PresetsTab.EditCooldown') }}</v-card-title>
                 <v-card-text>
-                    <settings-row :title="$t('Settings.PresetsTab.CustomGCode')">
+                    <settings-row :title="$t('Settings.PresetsTab.CustomGCode').toString()">
                         <v-textarea v-model="cooldownForm.gcode" outlined hide-details></v-textarea>
                     </settings-row>
                 </v-card-text>
@@ -135,6 +142,7 @@ import { Component, Mixins } from 'vue-property-decorator'
 import BaseMixin from '../mixins/base'
 import SettingsRow from '@/components/settings/SettingsRow.vue'
 import { GuiPresetsStatePreset } from '@/store/gui/presets/types'
+import { mdiDelete, mdiPencil, mdiCloseCircle } from '@mdi/js'
 
 interface presetForm {
     bool: boolean
@@ -156,6 +164,10 @@ interface presetForm {
     components: { SettingsRow },
 })
 export default class SettingsPresetsTab extends Mixins(BaseMixin) {
+    mdiPencil = mdiPencil
+    mdiDelete = mdiDelete
+    mdiCloseCircle = mdiCloseCircle
+
     convertName = convertName
 
     private form: presetForm = {
@@ -175,8 +187,9 @@ export default class SettingsPresetsTab extends Mixins(BaseMixin) {
     }
 
     private rules = {
-        required: (value: string) => value !== '' || 'required',
-        unique: (value: string) => !this.existsPresetName(value) || 'Name already exists',
+        required: (value: string) => value !== '' || this.$t('Settings.PresetsTab.ErrorNameRequired'),
+        unique: (value: string) => !this.existsPresetName(value) || this.$t('Settings.PresetsTab.ErrorNameNotUnique'),
+        invalid: (value: string) => parseFloat(value) >= 0 || this.$t('Settings.PresetsTab.ErrorInvalidValue'),
     }
 
     get presets() {

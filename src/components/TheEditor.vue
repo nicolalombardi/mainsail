@@ -12,13 +12,8 @@
             @keydown.esc="escClose">
             <panel
                 card-class="editor-dialog"
-                :icon="isWriteable ? ' mdi-file-document-edit-outline' : 'mdi-file-document-outline'"
-                :title="
-                    (filepath ? filepath.slice(1) + '/' : '') +
-                    filename +
-                    ' ' +
-                    (isWriteable ? changed : '(' + $t('Editor.FileReadOnly') + ')')
-                ">
+                :icon="isWriteable ? mdiFileDocumentEditOutline : mdiFileDocumentOutline"
+                :title="title">
                 <template #buttons>
                     <v-btn
                         v-if="restartServiceName === 'klipper'"
@@ -27,7 +22,7 @@
                         href="https://www.klipper3d.org/Config_Reference.html"
                         target="_blank"
                         class="d-none d-md-flex">
-                        <v-icon small class="mr-1">mdi-help</v-icon>
+                        <v-icon small class="mr-1">{{ mdiHelp }}</v-icon>
                         {{ $t('Editor.ConfigReference') }}
                     </v-btn>
                     <v-btn
@@ -36,23 +31,25 @@
                         tile
                         :color="restartServiceName === null ? 'primary' : ''"
                         @click="save(null)">
-                        <v-icon small class="mr-1">mdi-content-save</v-icon>
+                        <v-icon small class="mr-1">{{ mdiContentSave }}</v-icon>
                         <span class="d-none d-sm-inline">{{ $t('Editor.SaveClose') }}</span>
                     </v-btn>
                     <v-btn
-                        v-if="restartServiceName !== null"
+                        v-if="restartServiceNameExists"
                         color="primary"
                         text
                         tile
                         class="d-none d-sm-flex"
                         @click="save(restartServiceName)">
-                        <v-icon small class="mr-1">mdi-restart</v-icon>
+                        <v-icon small class="mr-1">{{ mdiRestart }}</v-icon>
                         {{ $t('Editor.SaveRestart') }}
                     </v-btn>
-                    <v-btn icon tile @click="close"><v-icon>mdi-close-thick</v-icon></v-btn>
+                    <v-btn icon tile @click="close">
+                        <v-icon>{{ mdiCloseThick }}</v-icon>
+                    </v-btn>
                 </template>
                 <v-card-text class="pa-0">
-                    <overlay-scrollbars style="height: calc(var(--app-height) - 48px)" :options="{}">
+                    <overlay-scrollbars style="height: calc(var(--app-height) - 48px)" :options="scrollbarOptions">
                         <codemirror-async
                             v-if="show"
                             ref="editor"
@@ -84,18 +81,20 @@
             </template>
             <template #action="{ attrs }">
                 <v-btn color="red" text v-bind="attrs" style="min-width: auto" tile @click="cancelDownload">
-                    <v-icon class="0">mdi-close</v-icon>
+                    <v-icon class="0">{{ mdiClose }}</v-icon>
                 </v-btn>
             </template>
         </v-snackbar>
         <v-dialog v-model="dialogConfirmChange" persistent :width="600">
             <panel
                 card-class="editor-confirm-change-dialog"
-                icon="mdi-help-circle"
+                :icon="mdiHelpCircle"
                 :title="$t('Editor.UnsavedChanges')"
                 :margin-bottom="false">
                 <template #buttons>
-                    <v-btn icon tile @click="dialogConfirmChange = false"><v-icon>mdi-close-thick</v-icon></v-btn>
+                    <v-btn icon tile @click="dialogConfirmChange = false">
+                        <v-icon>{{ mdiCloseThick }}</v-icon>
+                    </v-btn>
                 </template>
                 <v-card-text class="pt-3">
                     <v-row>
@@ -113,7 +112,7 @@
                     <v-btn text color="primary" @click="save">
                         {{ $t('Editor.SaveClose') }}
                     </v-btn>
-                    <template v-if="restartServiceName != null">
+                    <template v-if="restartServiceNameExists">
                         <v-btn text color="primary" @click="save(restartServiceName)">
                             {{ $t('Editor.SaveRestart') }}
                         </v-btn>
@@ -125,11 +124,22 @@
 </template>
 
 <script lang="ts">
-import { Component, Mixins } from 'vue-property-decorator'
+import { Component, Mixins, Watch } from 'vue-property-decorator'
 import BaseMixin from '@/components/mixins/base'
-import { formatFilesize } from '@/plugins/helpers'
+import { capitalize, formatFilesize, windowBeforeUnloadFunction } from '@/plugins/helpers'
 import Panel from '@/components/ui/Panel.vue'
 import CodemirrorAsync from '@/components/inputs/CodemirrorAsync'
+import {
+    mdiClose,
+    mdiCloseThick,
+    mdiContentSave,
+    mdiFileDocumentOutline,
+    mdiFileDocumentEditOutline,
+    mdiHelp,
+    mdiHelpCircle,
+    mdiRestart,
+} from '@mdi/js'
+import type Codemirror from '@/components/inputs/Codemirror.vue'
 
 @Component({
     components: { Panel, CodemirrorAsync },
@@ -139,12 +149,30 @@ export default class TheEditor extends Mixins(BaseMixin) {
 
     formatFilesize = formatFilesize
 
+    /**
+     * Icons
+     */
+    mdiCloseThick = mdiCloseThick
+    mdiHelp = mdiHelp
+    mdiContentSave = mdiContentSave
+    mdiRestart = mdiRestart
+    mdiClose = mdiClose
+    mdiHelpCircle = mdiHelpCircle
+    mdiFileDocumentEditOutline = mdiFileDocumentEditOutline
+    mdiFileDocumentOutline = mdiFileDocumentOutline
+
+    private scrollbarOptions = { scrollbars: { autoHide: 'never' } }
+
     declare $refs: {
-        editor: any
+        editor: Codemirror
     }
 
     get changed() {
-        return this.$store.state.editor.changed ? '*' : ''
+        return this.$store.state.editor.changed ?? false
+    }
+
+    get changedOutput() {
+        return this.changed ? '*' : ''
     }
 
     get show() {
@@ -157,6 +185,12 @@ export default class TheEditor extends Mixins(BaseMixin) {
 
     get filename(): string {
         return this.$store.state.editor.filename ?? ''
+    }
+
+    get filenameWithoutExtension(): string {
+        if (this.filename.lastIndexOf('.')) return this.filename.slice(0, this.filename.lastIndexOf('.'))
+
+        return this.filename
     }
 
     get fileExtension() {
@@ -194,26 +228,55 @@ export default class TheEditor extends Mixins(BaseMixin) {
     }
 
     get snackbarHeadline() {
-        let directionUppercase = this.$t('Files.Downloading')
-        if (this.loaderProgress.direction) {
-            directionUppercase =
-                this.loaderProgress.direction?.charAt(0).toUpperCase() + this.loaderProgress.direction?.slice(1)
-        }
+        let directionUppercase = this.$t('Editor.Downloading')
+        if (this.loaderProgress.direction) directionUppercase = capitalize(this.loaderProgress.direction)
 
-        return this.$t('Editor.' + directionUppercase)
+        return this.$t(`Editor.${directionUppercase}`)
+    }
+
+    get availableServices() {
+        return this.$store.state.server.system_info?.available_services ?? []
     }
 
     get restartServiceName() {
         if (!this.isWriteable) return null
         if (['printing', 'paused'].includes(this.printer_state)) return null
 
-        if (this.filename === 'moonraker.conf') return 'moonraker'
-        else if (this.filename === 'webcam.conf') return 'webcamd'
-        else if (this.filename.startsWith('webcam') && this.filename.endsWith('.txt')) return 'webcamd'
-        else if (this.filename.startsWith('mooncord') && this.filename.endsWith('.json')) return 'mooncord'
-        else if (this.filename.endsWith('.cfg')) return 'klipper'
+        if (this.availableServices.includes(this.filenameWithoutExtension) && this.fileExtension === 'conf')
+            return this.filenameWithoutExtension
+        if (this.filename.startsWith('webcam') && ['conf', 'txt'].includes(this.fileExtension)) return 'webcamd'
+        if (this.filename.startsWith('mooncord') && this.fileExtension === 'json') return 'mooncord'
+        if (this.filename === 'moonraker.conf') return this.moonrakerRestartInstance ?? 'moonraker'
+
+        if (this.fileExtension === 'cfg') return 'klipper'
 
         return null
+    }
+
+    get restartServiceNameExists() {
+        if (this.restartServiceName) return true
+
+        return this.availableServices.includes(this.restartServiceName)
+    }
+
+    get moonrakerRestartInstance() {
+        return this.$store.state.gui.editor.moonrakerRestartInstance
+    }
+
+    get confirmUnsavedChanges() {
+        return this.$store.state.gui.editor.confirmUnsavedChanges ?? false
+    }
+
+    get escToClose() {
+        return this.$store.state.gui.editor.escToClose ?? false
+    }
+
+    get title() {
+        const title = this.filepath ? `${this.filepath}/${this.filename}` : this.filename
+
+        if (!this.isWriteable) return `${title} (${this.$t('Editor.FileReadOnly')})`
+
+        return `${title} ${this.changedOutput}`
     }
 
     cancelDownload() {
@@ -221,11 +284,11 @@ export default class TheEditor extends Mixins(BaseMixin) {
     }
 
     escClose() {
-        if (this.$store.state.gui.editor.escToClose) this.close()
+        if (this.escToClose) this.close()
     }
 
     close() {
-        if (this.$store.state.gui.editor.confirmUnsavedChanges) this.promptUnsavedChanges()
+        if (this.confirmUnsavedChanges) this.promptUnsavedChanges()
         else this.$store.dispatch('editor/close')
     }
 
@@ -235,7 +298,7 @@ export default class TheEditor extends Mixins(BaseMixin) {
     }
 
     promptUnsavedChanges() {
-        if (!this.$store.state.editor.changed || !this.isWriteable) this.$store.dispatch('editor/close')
+        if (!this.changed || !this.isWriteable) this.$store.dispatch('editor/close')
         else this.dialogConfirmChange = true
     }
 
@@ -246,6 +309,14 @@ export default class TheEditor extends Mixins(BaseMixin) {
             content: this.sourcecode,
             restartServiceName: restartServiceName,
         })
+    }
+
+    @Watch('changed')
+    changedChanged(newVal: boolean) {
+        if (this.confirmUnsavedChanges) {
+            if (newVal) window.addEventListener('beforeunload', windowBeforeUnloadFunction)
+            else window.removeEventListener('beforeunload', windowBeforeUnloadFunction)
+        }
     }
 }
 </script>
