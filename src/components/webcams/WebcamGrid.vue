@@ -1,15 +1,9 @@
-<style>
-
-</style>
+<style></style>
 
 <template>
-    <v-container fluid class="pb-4" v-if="webcams">
+    <v-container v-if="webcams" fluid class="pb-4">
         <v-row dense>
-            <v-col
-                v-for="webcam in webcams"
-                :key="webcam.id"
-                cols="6"
-            >
+            <v-col v-for="webcam in webcams" :key="webcam.id" cols="6">
                 <template v-if="webcam.service === 'mjpegstreamer'">
                     <webcam-mjpegstreamer :cam-settings="webcam"></webcam-mjpegstreamer>
                 </template>
@@ -34,7 +28,7 @@
 </template>
 
 <script lang="ts">
-import {Component, Mixins, Prop} from 'vue-property-decorator'
+import { Component, Mixins, Prop } from 'vue-property-decorator'
 import BaseMixin from '@/components/mixins/base'
 import Mjpegstreamer from '@/components/webcams/Mjpegstreamer.vue'
 import MjpegstreamerAdaptive from '@/components/webcams/MjpegstreamerAdaptive.vue'
@@ -42,6 +36,7 @@ import Uv4lMjpeg from '@/components/webcams/Uv4lMjpeg.vue'
 import Ipstreamer from '@/components/webcams/Ipstreamer.vue'
 import Hlsstreamer from '@/components/webcams/Hlsstreamer.vue'
 import {GuiWebcamStateWebcam} from '@/store/gui/webcams/types'
+import { GuiWebcamStateWebcam } from '@/store/gui/webcams/types'
 
 @Component({
     components: {
@@ -53,7 +48,6 @@ import {GuiWebcamStateWebcam} from '@/store/gui/webcams/types'
     }
 })
 export default class WebcamGrid extends Mixins(BaseMixin) {
-
-    @Prop() readonly webcams!: GuiWebcamStateWebcam[]
+    @Prop() declare readonly webcams: GuiWebcamStateWebcam[]
 }
 </script>
