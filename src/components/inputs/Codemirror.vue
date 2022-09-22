@@ -9,12 +9,13 @@
 
 import { Component, Mixins, Prop, Watch } from 'vue-property-decorator'
 import BaseMixin from '../mixins/base'
-import { basicSetup, EditorState } from '@codemirror/basic-setup'
+import { basicSetup } from 'codemirror'
+import { EditorView, keymap } from '@codemirror/view'
+import { EditorState } from '@codemirror/state'
 import { mainsailTheme } from '@/plugins/codemirrorTheme'
-import { StreamLanguage } from '@codemirror/stream-parser'
+import { StreamLanguage } from '@codemirror/language'
 import { klipper_config } from '@/plugins/StreamParserKlipperConfig'
 import { gcode } from '@/plugins/StreamParserGcode'
-import { EditorView, keymap } from '@codemirror/view'
 import { indentWithTab } from '@codemirror/commands'
 import { json } from '@codemirror/lang-json'
 import { css } from '@codemirror/lang-css'
@@ -94,7 +95,7 @@ export default class Codemirror extends Mixins(BaseMixin) {
         if (['cfg', 'conf'].includes(this.fileExtension)) extensions.push(StreamLanguage.define(klipper_config))
         else if (['gcode'].includes(this.fileExtension)) extensions.push(StreamLanguage.define(gcode))
         else if (['json'].includes(this.fileExtension)) extensions.push(json())
-        else if (['css'].includes(this.fileExtension)) extensions.push(css())
+        else if (['css', 'scss', 'sass'].includes(this.fileExtension)) extensions.push(css())
 
         return extensions
     }
