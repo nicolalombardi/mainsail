@@ -73,7 +73,7 @@ You can find the latest release notes [here](https://github.com/mainsail-crew/ma
 - **Power Control:** _Control power devices such as relays, TP-Link and Tasmota devices, and more_
 - **Powerful Macro-Management:** _Manage your macros on a micro level_
 - **[Configurable Dashboard](https://docs.mainsail.xyz/features/dashboard-organisation):** _Create your own personal dashboard_
-- **[Theming Support](https://docs.mainsail.xyz/features/theming/):** _Customizable user interface including logos, backgrounds, and custom CSS_
+- **[Theming Support](https://docs.mainsail.xyz/features/theming):** _Customizable user interface including logos, backgrounds, and custom CSS_
 - **[Additional Sensors](https://docs.mainsail.xyz/quicktips/additional-sensors):** _Add extra sensors to the temperature graph_
 - **Exclude Objects:** _Exclude parts of your print <sup>(not officially supported by Klipper yet)</sup>_
 
@@ -83,6 +83,14 @@ Do you need help or just want to talk? Join our active community on [Discord](ht
 
 Did you find a bug or did you thought of a feature?
 Please create an [Issue](https://github.com/mainsail-crew/mainsail/issues) in GitHub and let us know.
+
+## Official Sponsors
+
+<p align='center'>
+    <img src="https://raw.githubusercontent.com/mainsail-crew/docs/master/assets/img/logo-bigtreetech.png" alt='Mainsail logo' width="150">
+</p>
+
+**BIGTREETECH** is the official mainboard partner of Mainsail. BIGTREETECH is committed to developing innovative and competitive products to better serve the 3D printing community.
 
 ## Support Mainsail
 

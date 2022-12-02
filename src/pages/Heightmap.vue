@@ -186,7 +186,7 @@
                         </v-row>
                         <v-divider class="my-3"></v-divider>
                         <v-row class="px-3">
-                            <v-col>{{ $t('Heightmap.CurrentMesh.Variance') }}</v-col>
+                            <v-col>{{ $t('Heightmap.CurrentMesh.Range') }}</v-col>
                             <v-col class="text-right">{{ currentProfile.variance.toFixed(3) }} mm</v-col>
                         </v-row>
                     </v-card-text>
@@ -866,7 +866,8 @@ export default class PageHeightmap extends Mixins(BaseMixin, ControlMixin) {
             if (config.probe_count && typeof config.probe_count === 'string') {
                 probe_count = config.probe_count.split(',')
             } else if (config.probe_count) {
-                probe_count = config.probe_count
+                probe_count =
+                    config.probe_count.length < 2 ? [config.probe_count, config.probe_count] : config.probe_count
             } else if (config.round_probe_count) {
                 probe_count = [config.round_probe_count, config.round_probe_count]
             }
