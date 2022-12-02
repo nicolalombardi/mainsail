@@ -8,7 +8,6 @@ import {
 import { GetterTree } from 'vuex'
 import { FileState, FileStateFile, FileStateGcodefile } from '@/store/files/types'
 import { ServerHistoryStateJob } from '@/store/server/history/types'
-import { ServerJobQueueStateJob } from '@/store/server/jobQueue/types'
 
 // eslint-disable-next-line
 export const getters: GetterTree<FileState, any> = {
@@ -44,6 +43,9 @@ export const getters: GetterTree<FileState, any> = {
     getGcodeFiles:
         (state, getters, rootState, rootGetters) =>
         (path: string | null, boolShowHiddenFiles: boolean, boolShowPrintedFiles: boolean) => {
+            const rootGcodes = getters['getDirectory']('gcodes')
+            if (rootGcodes === null) return []
+
             let baseURL = `${rootGetters['socket/getUrl']}/server/files/gcodes`
             let files: FileStateFile[] = []
 
@@ -52,8 +54,6 @@ export const getters: GetterTree<FileState, any> = {
                 const directory = getters['getDirectory']('gcodes' + path)
                 files = directory?.childrens ?? []
             } else {
-                const rootGcodes = getters['getDirectory']('gcodes')
-
                 const searchGcodes = (directory: FileStateFile, currentPath: string) => {
                     if (directory.isDirectory && directory.childrens?.length) {
                         directory.childrens?.forEach((file) => {

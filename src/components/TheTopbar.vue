@@ -1,27 +1,3 @@
-<style>
-.topbar .v-toolbar__content {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-}
-</style>
-<style scoped>
-.button-min-width-auto {
-    min-width: auto !important;
-}
-.topbar .v-btn {
-    height: 100% !important;
-    max-height: none;
-}
-.topbar .v-btn.v-btn--icon {
-    width: var(--topbar-icon-btn-width) !important;
-}
-@media (min-width: 768px) {
-    header.topbar {
-        z-index: 8 !important;
-    }
-}
-</style>
-
 <template>
     <div>
         <v-app-bar app elevate-on-scroll :height="topbarHeight" class="topbar pa-0" clipped-left>
@@ -50,7 +26,7 @@
             <input
                 ref="fileUploadAndStart"
                 type="file"
-                :accept="validGcodeExtensions.join(', ')"
+                :accept="gcodeInputFileAccept.join(', ')"
                 style="display: none"
                 @change="uploadAndStart" />
             <v-btn
@@ -67,11 +43,7 @@
                 <span class="d-none d-md-inline">{{ $t('App.TopBar.SAVE_CONFIG') }}</span>
             </v-btn>
             <v-btn
-                v-if="
-                    klippyIsConnected &&
-                    ['standby', 'complete', 'cancelled'].includes(printer_state) &&
-                    !boolHideUploadAndPrintButton
-                "
+                v-if="boolShowUploadAndPrint"
                 tile
                 :icon="$vuetify.breakpoint.smAndDown"
                 :text="$vuetify.breakpoint.mdAndUp"
@@ -91,7 +63,7 @@
                 class="button-min-width-auto px-3 emergency-button"
                 :loading="loadings.includes('topbarEmergencyStop')"
                 @click="btnEmergencyStop">
-                <v-icon class="mr-md-2">{{ mdiAlertCircleOutline }}</v-icon>
+                <v-icon class="mr-md-2">{{ mdiAlertOctagonOutline }}</v-icon>
                 <span class="d-none d-md-inline">{{ $t('App.TopBar.EmergencyStop') }}</span>
             </v-btn>
             <the-notification-menu></the-notification-menu>
@@ -112,10 +84,10 @@
         </v-snackbar>
         <v-dialog v-model="showEmergencyStopDialog" width="400" :fullscreen="isMobile">
             <panel
-                :title="$t('EmergencyStopDialog.EmergencyStop')"
+                :title="$t('EmergencyStopDialog.EmergencyStop').toString()"
                 toolbar-color="error"
                 card-class="emergency-stop-dialog"
-                :icon="mdiAlertCircleOutline"
+                :icon="mdiAlertOctagonOutline"
                 :margin-bottom="false">
                 <template #buttons>
                     <v-btn icon tile @click="showEmergencyStopDialog = false">
@@ -147,7 +119,7 @@ import PrinterSelector from '@/components/ui/PrinterSelector.vue'
 import MainsailLogo from '@/components/ui/MainsailLogo.vue'
 import TheNotificationMenu from '@/components/notifications/TheNotificationMenu.vue'
 import { topbarHeight } from '@/store/variables'
-import { mdiAlertCircleOutline, mdiContentSave, mdiFileUpload, mdiClose, mdiCloseThick } from '@mdi/js'
+import { mdiAlertOctagonOutline, mdiContentSave, mdiFileUpload, mdiClose, mdiCloseThick } from '@mdi/js'
 
 type uploadSnackbar = {
     status: boolean
@@ -173,7 +145,7 @@ type uploadSnackbar = {
     },
 })
 export default class TheTopbar extends Mixins(BaseMixin) {
-    mdiAlertCircleOutline = mdiAlertCircleOutline
+    mdiAlertOctagonOutline = mdiAlertOctagonOutline
     mdiContentSave = mdiContentSave
     mdiFileUpload = mdiFileUpload
     mdiClose = mdiClose
@@ -202,16 +174,18 @@ export default class TheTopbar extends Mixins(BaseMixin) {
         fileUploadAndStart: HTMLFormElement
     }
 
+    get gcodeInputFileAccept() {
+        if (this.isIOS) return []
+
+        return validGcodeExtensions
+    }
+
     get naviDrawer() {
         return this.$store.state.naviDrawer
     }
 
     set naviDrawer(newVal) {
         this.$store.dispatch('setNaviDrawer', newVal)
-    }
-
-    get validGcodeExtensions() {
-        return validGcodeExtensions
     }
 
     get currentPage() {
@@ -248,6 +222,15 @@ export default class TheTopbar extends Mixins(BaseMixin) {
         return this.$store.state.gui.uiSettings.logo
     }
 
+    get boolShowUploadAndPrint() {
+        return (
+            this.klippyIsConnected &&
+            this.existGcodesRootDirectory &&
+            ['standby', 'complete', 'cancelled'].includes(this.printer_state) &&
+            !this.boolHideUploadAndPrintButton
+        )
+    }
+
     btnEmergencyStop() {
         const confirmOnEmergencyStop = this.$store.state.gui.uiSettings.confirmOnEmergencyStop
         if (confirmOnEmergencyStop) {
@@ -273,14 +256,14 @@ export default class TheTopbar extends Mixins(BaseMixin) {
 
     async uploadAndStart() {
         if (this.$refs.fileUploadAndStart?.files.length) {
-            this.$store.dispatch('socket/addLoading', { name: 'btnUploadAndStart' })
+            await this.$store.dispatch('socket/addLoading', { name: 'btnUploadAndStart' })
             let successFiles = []
             for (const file of this.$refs.fileUploadAndStart?.files || []) {
                 const result = await this.doUploadAndStart(file)
                 successFiles.push(result)
             }
 
-            this.$store.dispatch('socket/removeLoading', { name: 'btnUploadAndStart' })
+            await this.$store.dispatch('socket/removeLoading', { name: 'btnUploadAndStart' })
             for (const file of successFiles) {
                 const text = this.$t('App.TopBar.UploadOfFileSuccessful', { file: file }).toString()
                 this.$toast.success(text)
@@ -344,3 +327,32 @@ export default class TheTopbar extends Mixins(BaseMixin) {
     }
 }
 </script>
+
+<style>
+/*noinspection CssUnusedSymbol*/
+.topbar .v-toolbar__content {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+</style>
+<style scoped>
+.button-min-width-auto {
+    min-width: auto !important;
+}
+/*noinspection CssUnusedSymbol*/
+.topbar .v-btn {
+    height: 100% !important;
+    max-height: none;
+}
+/*noinspection CssUnusedSymbol*/
+.topbar .v-btn.v-btn--icon {
+    /*noinspection CssUnresolvedCustomProperty*/
+    width: var(--topbar-icon-btn-width) !important;
+}
+/*noinspection CssUnusedSymbol*/
+@media (min-width: 768px) {
+    header.topbar {
+        z-index: 8 !important;
+    }
+}
+</style>

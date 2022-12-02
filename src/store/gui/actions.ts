@@ -13,6 +13,7 @@ export const actions: ActionTree<GuiState, RootState> = {
         dispatch('gcodehistory/reset')
         dispatch('macros/reset')
         dispatch('presets/reset')
+        dispatch('webcams/reset')
     },
 
     init() {
@@ -25,7 +26,8 @@ export const actions: ActionTree<GuiState, RootState> = {
         const mainsailUrl = baseUrl + '?namespace=mainsail'
 
         if ('remoteprinters' in payload.value) {
-            if (!rootState.remoteMode) dispatch('remoteprinters/initStore', payload.value.remoteprinters.printers)
+            if (rootState.instancesDB === 'moonraker')
+                dispatch('remoteprinters/initStore', payload.value.remoteprinters.printers)
             delete payload.value.remoteprinters
         }
 
@@ -113,7 +115,8 @@ export const actions: ActionTree<GuiState, RootState> = {
             })
         }
 
-        commit('setData', payload.value)
+        await commit('setData', payload.value)
+        await dispatch('socket/removeInitModule', 'gui/init', { root: true })
     },
 
     /*
@@ -236,7 +239,7 @@ export const actions: ActionTree<GuiState, RootState> = {
         })
     },
 
-    async resetMoonrakerDB({ commit, dispatch, rootGetters }, payload) {
+    async resetMoonrakerDB({ rootGetters }, payload) {
         const baseUrl = rootGetters['socket/getUrl'] + '/server/database/item'
 
         const urlDefault =
@@ -303,7 +306,7 @@ export const actions: ActionTree<GuiState, RootState> = {
         window.location.reload()
     },
 
-    async backupMoonrakerDB({ commit, dispatch, rootGetters }, payload) {
+    async backupMoonrakerDB({ rootGetters }, payload) {
         const backup: any = {}
 
         const responseMainsail = await fetch(rootGetters['socket/getUrl'] + '/server/database/item?namespace=mainsail')

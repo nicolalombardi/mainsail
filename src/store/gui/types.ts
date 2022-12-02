@@ -10,6 +10,9 @@ export interface GuiState {
     general: {
         printername: string
         language: string
+        dateFormat: string | null
+        timeFormat: string | null
+        calcPrintProgress: 'file-relative' | 'file-absolute' | 'slicer' | 'filament'
         calcEstimateTime: string[] // file, filament are possible values
         calcEtaTime: string[] // file, filament, slicer are possible values
     }
@@ -156,6 +159,7 @@ export interface GuiState {
             sortDesc: boolean
             showHiddenFiles: boolean
             currentPath: string
+            selectedFiles: FileStateFile[]
         }
         webcam: {
             currentCam: {
