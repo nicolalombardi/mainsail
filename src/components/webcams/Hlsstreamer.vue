@@ -41,7 +41,7 @@ export default class Hlsstreamer extends Mixins(BaseMixin) {
 
     instantiatePlayer(){
         this.hlsObject = new Hls()
-        let stream = this.camSettings.urlStream
+        let stream = this.camSettings.stream_url
         let video = this.$refs['hlsstreamer']
         this.hlsObject.loadSource(stream)
         this.hlsObject.attachMedia(video)
