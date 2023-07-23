@@ -48,10 +48,10 @@ export const getters: GetterTree<GuiState, any> = {
             allPanels = allPanels.filter((name) => name !== 'macros')
         }
 
-        // remove toolhead panel, if kinematics === none
+        // remove toolhead & machine-settings panel, if kinematics === none
         const printerKinematics = rootGetters['printer/getKinematics']
         if (printerKinematics === 'none') {
-            allPanels = allPanels.filter((name) => name !== 'toolhead-control')
+            allPanels = allPanels.filter((name) => !['toolhead-control', 'machine-settings'].includes(name))
         }
 
         // remove extruder panel, if printerExtruderCount < 1
@@ -60,10 +60,9 @@ export const getters: GetterTree<GuiState, any> = {
             allPanels = allPanels.filter((name) => name !== 'extruder-control')
         }
 
-        // remove temperature panel, if heaters & sensors < 1
-        const printerAvailableHeaters = rootGetters['printer/getAvailableHeaters']
-        const printerTemperatureSensorKeys = rootGetters['printer/getTemperatureSensorKeys']
-        if (printerAvailableHeaters.length + printerTemperatureSensorKeys.length < 1) {
+        // remove temperature panel, if sensors < 1
+        const printerTemperatureSensors = rootState.printer?.heaters?.available_sensors ?? []
+        if (printerTemperatureSensors.length < 1) {
             allPanels = allPanels.filter((name) => name !== 'temperature')
         }
 
@@ -82,10 +81,10 @@ export const getters: GetterTree<GuiState, any> = {
             const layoutName = column ? `${viewport}Layout${column}` : `${viewport}Layout`
             // @ts-ignore
             let panels = state.dashboard[layoutName]?.filter((element: any) => element !== null) ?? []
+            const allPossiblePanels = getters['getAllPossiblePanels']
 
             if (column < 2) {
                 const allViewportPanels = getters['getAllPanelsFromViewport'](viewport)
-                const allPossiblePanels = getters['getAllPossiblePanels']
                 const missingPanels: any[] = []
 
                 allPossiblePanels.forEach((panelname: string) => {
@@ -121,11 +120,7 @@ export const getters: GetterTree<GuiState, any> = {
                 }
             }
 
-            if (getters['webcams/getWebcams'].length === 0) {
-                panels = panels.filter((element: any) => element.name !== 'webcam')
-            }
-
-            return panels
+            return panels.filter((element: any) => allPossiblePanels.includes(element.name))
         },
 
     getAllPanelsFromViewport: (state) => (viewport: string) => {

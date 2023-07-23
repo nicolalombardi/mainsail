@@ -1,21 +1,5 @@
-<style scoped>
-.webcamImage {
-    width: 100%;
-}
-
-.webcamFpsOutput {
-    display: inline-block;
-    position: absolute;
-    bottom: 6px;
-    right: 0;
-    background: rgba(0, 0, 0, 0.8);
-    padding: 3px 10px;
-    border-top-left-radius: 5px;
-}
-</style>
-
 <template>
-    <div style="position: relative">
+    <div style="position: relative" class="d-flex justify-center">
         <div v-if="!isLoaded" class="text-center py-5">
             <v-progress-circular indeterminate color="primary"></v-progress-circular>
         </div>
@@ -36,6 +20,7 @@
 import Component from 'vue-class-component'
 import { Mixins, Prop, Watch } from 'vue-property-decorator'
 import BaseMixin from '@/components/mixins/base'
+import { GuiWebcamStateWebcam } from '@/store/gui/webcams/types'
 
 @Component
 export default class MjpegstreamerAdaptive extends Mixins(BaseMixin) {
@@ -44,7 +29,8 @@ export default class MjpegstreamerAdaptive extends Mixins(BaseMixin) {
     private isVisibleDocument = true
     private isVisibleViewport = false
     private isLoaded = true
-    private timer: number | undefined = undefined
+    // eslint-disable-next-line no-undef
+    private timer: NodeJS.Timeout | undefined = undefined
 
     private request_start_time = performance.now()
     private start_time = performance.now()
@@ -59,23 +45,28 @@ export default class MjpegstreamerAdaptive extends Mixins(BaseMixin) {
         mjpegstreamerAdaptive: any
     }
 
-    @Prop({ required: true }) declare camSettings: any
-    @Prop() declare printerUrl: string | undefined
+    @Prop({ required: true }) declare camSettings: GuiWebcamStateWebcam
+    @Prop({ default: null }) readonly printerUrl!: string | null
     @Prop({ default: true }) declare showFps: boolean
 
     get webcamStyle() {
         const output = {
             transform: 'none',
             aspectRatio: 16 / 9,
+            maxHeight: window.innerHeight - 155 + 'px',
+            maxWidth: 'auto',
         }
 
         let transforms = ''
-        if (this.camSettings.flipX ?? false) transforms += ' scaleX(-1)'
-        if (this.camSettings.flipY ?? false) transforms += ' scaleY(-1)'
-        if ((this.camSettings.rotate ?? 0) === 180) transforms += ' rotate(180deg)'
+        if (this.camSettings.flip_horizontal ?? false) transforms += ' scaleX(-1)'
+        if (this.camSettings.flip_vertical ?? false) transforms += ' scaleY(-1)'
+        if ((this.camSettings.rotation ?? 0) === 180) transforms += ' rotate(180deg)'
         if (transforms.trimStart().length) output.transform = transforms.trimStart()
 
-        if (this.aspectRatio) output.aspectRatio = this.aspectRatio
+        if (this.aspectRatio) {
+            output.aspectRatio = this.aspectRatio
+            output.maxWidth = (window.innerHeight - 155) * this.aspectRatio + 'px'
+        }
 
         return output
     }
@@ -85,7 +76,7 @@ export default class MjpegstreamerAdaptive extends Mixins(BaseMixin) {
     }
 
     get rotate() {
-        return [90, 270].includes(this.camSettings.rotate ?? 0)
+        return [90, 270].includes(this.camSettings.rotation ?? 0)
     }
 
     refreshFrame() {
@@ -96,9 +87,9 @@ export default class MjpegstreamerAdaptive extends Mixins(BaseMixin) {
     }
 
     async setFrame() {
-        const baseUrl = this.camSettings.urlSnapshot
+        const baseUrl = this.camSettings.snapshot_url
 
-        let url = new URL(baseUrl, this.printerUrl === undefined ? this.hostUrl.toString() : this.printerUrl)
+        let url = new URL(baseUrl, this.printerUrl === null ? this.hostUrl.toString() : this.printerUrl)
         if (baseUrl.startsWith('http') || baseUrl.startsWith('://')) url = new URL(baseUrl)
 
         url.searchParams.append('bypassCache', this.refresh.toString())
@@ -114,10 +105,10 @@ export default class MjpegstreamerAdaptive extends Mixins(BaseMixin) {
             canvas.width = canvas.clientWidth
             if (this.rotate) {
                 if (this.aspectRatio === null) this.aspectRatio = frame.height / frame.width
-                canvas.height = canvas.clientWidth / (frame.height / frame.width)
+                canvas.height = canvas.clientWidth / this.aspectRatio
             } else {
                 if (this.aspectRatio === null) this.aspectRatio = frame.width / frame.height
-                canvas.height = canvas.clientWidth * (frame.width / frame.height)
+                canvas.height = canvas.clientWidth * this.aspectRatio
             }
 
             if (this.rotate) {
@@ -125,7 +116,7 @@ export default class MjpegstreamerAdaptive extends Mixins(BaseMixin) {
                 const x = canvas.width / 2
                 const y = canvas.height / 2
                 ctx.translate(x, y)
-                ctx.rotate((this.camSettings.rotate * Math.PI) / 180)
+                ctx.rotate((this.camSettings.rotation * Math.PI) / 180)
                 await ctx?.drawImage(
                     frame,
                     (-frame.width / 2) * scale,
@@ -133,7 +124,7 @@ export default class MjpegstreamerAdaptive extends Mixins(BaseMixin) {
                     frame.width * scale,
                     frame.height * scale
                 )
-                ctx.rotate(-((this.camSettings.rotate * Math.PI) / 180))
+                ctx.rotate(-((this.camSettings.rotation * Math.PI) / 180))
                 ctx.translate(-x, -y)
             } else await ctx?.drawImage(frame, 0, 0, frame.width, frame.height, 0, 0, canvas.width, canvas.height)
 
@@ -148,7 +139,7 @@ export default class MjpegstreamerAdaptive extends Mixins(BaseMixin) {
     onLoad() {
         this.isLoaded = true
 
-        const targetFps = this.camSettings.targetFps || 10
+        const targetFps = this.camSettings.target_fps || 10
         const end_time = performance.now()
         const current_time = end_time - this.start_time
         this.time = this.time * this.time_smoothing + current_time * (1.0 - this.time_smoothing)
@@ -223,3 +214,19 @@ export default class MjpegstreamerAdaptive extends Mixins(BaseMixin) {
     }
 }
 </script>
+
+<style scoped>
+.webcamImage {
+    width: 100%;
+}
+
+.webcamFpsOutput {
+    display: inline-block;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 3px 10px;
+    border-top-left-radius: 5px;
+}
+</style>

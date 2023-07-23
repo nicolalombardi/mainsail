@@ -1,7 +1,7 @@
 {
     "App": {
         "Notifications": {
-            "DependencyDescription": "当前版本的{name}并不支持Mainsail的全部特性。{name}需要至少更新到{neededVersion}版本。",
+            "DependencyDescription": "当前版本的{name}并不支持Mainsail的全部功能。{name}需要至少更新到{neededVersion}版本。",
             "DependencyName": "依赖：{name}",
             "DismissAll": "全部忽略",
             "KlipperWarnings": {
@@ -30,6 +30,11 @@
             "NoEmptyAllowedError": "输入值不能为空！"
         },
         "Printers": "打印机集群",
+        "TheServiceWorker": {
+            "DescriptionNeedUpdate": "本地缓存已过时，需要进行更新。请点击下面的按钮来更新缓存。",
+            "TitleNeedUpdate": "PWA需要更新",
+            "Update": "更新"
+        },
         "ThrottledStates": {
             "DescriptionCurrentlyThrottled": "树莓派ARM核心当前被限制。",
             "DescriptionFrequencyCapped": "树莓派ARM最高频率目前限制在1.2 GHz。",
@@ -52,6 +57,7 @@
             "Complete": "已完成 - {filename}",
             "Error": "错误",
             "Pause": "暂停打印",
+            "PrinterOff": "打印机已关闭",
             "Printing": "已打印 {percent}% - {filename}",
             "PrintingETA": "已打印 {percent}% - 预估: {eta} - {filename}"
         },
@@ -69,9 +75,9 @@
                 "Description": {
                     "HostReboot": "重启上位机会导致当前打印失败！",
                     "HostShutdown": "关闭上位机会导致当前打印失败！",
-                    "KlipperFirmwareRestart": "重置Klipper主控会导致当前打印失败！",
-                    "KlipperRestart": "重启klipper会导致当前打印失败！",
-                    "KlipperStop": "停止klipper会导致当前打印失败！",
+                    "KlipperFirmwareRestart": "重启Klipper固件会导致当前打印失败！",
+                    "KlipperRestart": "重启Klipper会导致当前打印失败！",
+                    "KlipperStop": "停止Klipper会导致当前打印失败！",
                     "ServiceRestart": "重启此服务可能会导致当前打印失败！",
                     "ServiceStart": "启动此服务可能会导致当前打印失败！",
                     "ServiceStop": "停止此服务可能会导致当前打印失败！"
@@ -79,7 +85,7 @@
                 "Title": {
                     "HostReboot": "重启上位机",
                     "HostShutdown": "关闭上位机",
-                    "KlipperFirmwareRestart": "重启Klipper并重置主控",
+                    "KlipperFirmwareRestart": "重启Klipper固件",
                     "KlipperRestart": "重启Klipper",
                     "ServiceRestart": "重启服务",
                     "ServiceStart": "启动服务",
@@ -88,7 +94,7 @@
             },
             "HostControl": "上位机控制",
             "KlipperControl": "Klipper控制",
-            "KlipperFirmwareRestart": "重启Klipper并重置主控",
+            "KlipperFirmwareRestart": "重启Klipper固件",
             "KlipperRestart": "重启Klipper",
             "PowerDevices": "电源设备",
             "Reboot": "重启",
@@ -112,8 +118,8 @@
         "Accept": "接受",
         "Adjusted": "已调整",
         "Description": "如果当前螺丝已调整，请点击<b>已调整</b>。未调整下继续请点击<b>认可</b>。",
-        "Headline": "热床螺丝",
-        "ScrewAccepted": "已认可的螺丝",
+        "Headline": "热床调平螺丝",
+        "ScrewAccepted": "已认可的调平螺丝",
         "ScrewIndex": "螺丝索引",
         "ScrewName": "螺丝名称",
         "ScrewOutput": "当前{current}/总共{max}"
@@ -128,10 +134,10 @@
     },
     "Console": {
         "CommandList": "命令列表",
-        "Empty": "空",
+        "Empty": "没有内容",
         "HideTemperatures": "隐藏温度变化消息",
         "HideTimelapse": "隐藏延时摄影消息",
-        "SendCode": "发送代码...",
+        "SendCode": "输入需要执行的命令...",
         "SetupConsole": "设置控制台"
     },
     "Dialogs": {
@@ -164,11 +170,13 @@
         "Yes": "确定"
     },
     "Files": {
+        "AddBatchToQueue": "批量添加到队列",
         "AddToQueue": "添加到队列",
         "AllFiles": "所有文件",
         "BedTemp": "热床温度",
         "Cancel": "取消",
         "ChamberTemp": "仓室温度",
+        "Count": "计数",
         "Create": "新建",
         "CreateNewDirectory": "新建文件夹",
         "CurrentPath": "当前路径",
@@ -176,9 +184,12 @@
         "DeleteDirectory": "删除文件夹",
         "DeleteDirectoryQuestion": "你确定要删除\"{name}\"和里面的所有内容吗？",
         "DeleteSelectedQuestion": "你确定要删除选中的{count}个文件？",
+        "DeleteSingleFileQuestion": "你确定要删除文件\"{name}\"吗？",
         "Download": "下载",
+        "Duplicate": "复制",
+        "DuplicateFile": "复制文件",
         "EditFile": "编辑文件",
-        "Empty": "空",
+        "Empty": "没有文件",
         "ExtruderTemp": "挤出机温度",
         "Filament": "耗材",
         "FilamentName": "耗材名称",
@@ -213,6 +224,8 @@
         "Rename": "重命名",
         "RenameDirectory": "重命名文件夹",
         "RenameFile": "重命名文件",
+        "ScanMeta": "扫描元数据",
+        "ScanMetaSuccess": "已成功扫描来自：{filename} 的元数据。",
         "Search": "搜索",
         "SetupCurrentList": "设置当前列表",
         "Slicer": "切片软件",
@@ -253,7 +266,9 @@
         "Tracking": "正在追踪",
         "Transparency": "透明度",
         "Ultra": "极致",
-        "VoxelMode": "体素模式(ASMBL)"
+        "VoxelMode": "体素模式(ASMBL)",
+        "ShowGCode": "显示G-Code",
+        "CNCMode": "CNC模式"
     },
     "Heightmap": {
         "Abort": "取消",
@@ -266,8 +281,8 @@
             "Max": "最高点",
             "Min": "最低点",
             "Name": "名称",
-            "Size": "尺寸",
-            "Variance": "方差"
+            "Range": "范围",
+            "Size": "尺寸"
         },
         "DeleteBedMeshProfile": "删除预设床网",
         "DoYouReallyWantToDelete": "你确定要删除预设\"{name}\"?",
@@ -275,6 +290,7 @@
         "Flat": "平面",
         "Heightmap": "高度图",
         "InvalidNameAlreadyExists": "预设名称已经存在，请换一个名称。",
+        "InvalidNameAscii": "错误的名称，请删除所有非ascii字符后重试。",
         "InvalidNameEmpty": "输入值不能为空！",
         "InvalidNameReserved": "预设 'default' 已保留，请选择其他预设名称。",
         "Later": "以后",
@@ -303,11 +319,13 @@
         "AvgPrinttime": "平均打印时间",
         "Cancel": "取消",
         "CreateNote": "新建便条",
+        "Chart": "图表",
         "Delete": "删除",
         "DeleteSelectedQuestion": "你是否要删除已选中的{count}个任务？",
+        "DeleteSingleJobQuestion": "你是否要删除这个任务？",
         "Details": "详情",
         "EditNote": "编辑便条",
-        "Empty": "空",
+        "Empty": "没有内容",
         "EndTime": "结束时间",
         "EstimatedFilament": "预估耗材用量",
         "EstimatedFilamentWeight": "预估耗材重量",
@@ -320,8 +338,8 @@
         "FirstLayerBedTemp": "首层热床温度",
         "FirstLayerExtTemp": "首层仓内温度",
         "FirstLayerHeight": "首层高度",
-        "HistoryFilamentUsage": "耗材",
-        "HistoryPrinttimeAVG": "打印",
+        "HistoryFilamentUsage": "耗材用量",
+        "HistoryPrinttimeAVG": "打印时间",
         "JobDetails": "任务详情",
         "Jobs": "每页显示任务数",
         "LastModified": "上次修改",
@@ -348,12 +366,13 @@
             "cancelled": "取消",
             "completed": "完成",
             "error": "错误",
-            "in_progress": "进程中",
+            "in_progress": "打印中",
             "klippy_disconnect": "Klippy失去连接",
             "klippy_shutdown": "Klippy已关闭",
             "Others": "其他",
             "server_exit": "服务器退出"
         },
+        "Table": "表格",
         "TitleExportHistory": "导出历史记录",
         "TitleRefreshHistory": "刷新历史记录",
         "TitleSettings": "设置",
@@ -365,7 +384,12 @@
     },
     "JobQueue": {
         "AllJobs": "全部任务",
-        "Empty": "空",
+        "ChangeCount": "变更计数",
+        "Cancel": "取消",
+        "Count": "计数",
+        "Empty": "没有任务",
+        "InvalidCountEmpty": "输入值不能为空！",
+        "InvalidCountGreaterZero": "输入值必须大于0！",
         "JobQueue": "任务队列",
         "Jobs": "每页显示任务数",
         "Pause": "暂停",
@@ -386,9 +410,12 @@
             "DeleteDirectory": "删除文件夹",
             "DeleteDirectoryQuestion": "你确定删除\"{name}\"文件夹和里面的所有内容吗？",
             "DeleteSelectedQuestion": "删除已选中的{count}个项目？",
+            "DeleteSingleFileQuestion": "你确定要删除文件\"{name}\"吗？",
             "Download": "下载",
+            "Duplicate": "复制",
+            "DuplicateFile": "复制文件",
             "EditFile": "编辑文件",
-            "Empty": "空",
+            "Empty": "没有文件",
             "Files": "每页显示文件数",
             "Filesize": "文件大小",
             "Free": "未使用",
@@ -410,14 +437,20 @@
             "Used": "已使用"
         },
         "EndstopPanel": {
-            "Endstop": "限位开关",
-            "EndstopInfo": "点击右侧同步按钮获取限位开关状态",
+            "Endstop": "限位",
+            "EndstopInfo": "点击右侧同步按钮刷新限位状态",
             "Endstops": "限位",
             "open": "未触发",
             "TRIGGERED": "已触发"
         },
         "LogfilesPanel": {
-            "Logfiles": "日志文件"
+            "Accept": "接受",
+            "Cancel": "取消",
+            "Logfiles": "日志文件",
+            "Rollover": "清理日志",
+            "RolloverDescription": "请选择需要重置的日志：",
+            "RolloverToastSuccessful": "日志\"{name}\"已经重置。",
+            "RolloverToastFailed": "清理日志\"{name}\": {message}"
         },
         "SystemPanel": {
             "Constants": "常量",
@@ -430,7 +463,7 @@
             "SystemLoad": "系统负载",
             "Values": {
                 "Awake": "唤醒：{awake}",
-                "Bandwidth": "带宽：{bandwidth}/s",
+                "Bandwidth": "带宽值：{bandwidth}/s",
                 "Distro": "发行版：{name} {version_id}",
                 "Frequency": "频率：{frequency}",
                 "Load": "负载：{load}",
@@ -507,9 +540,12 @@
             "WebcamOff": "关闭"
         },
         "KlippyStatePanel": {
-            "FirmwareRestart": "重启Klipper并重置主控",
-            "KlipperCheck": "请检查Klipper服务是否运行。",
+            "CheckKlippyAndUdsAddress": "请检查Klipper服务是否启动并且moonraker.conf已经添加了klippy_uds_address配置。",
+            "FirmwareRestart": "重启Klipper固件",
             "MoonrakerCannotConnect": "Moonraker无法连接到Klipper ！",
+            "PowerOn": "开启电源",
+            "PrinterSwitchedOff": "打印机电源已关闭",
+            "PrinterSwitchedOffDescription": "打印机电源已关闭，Klipper无法连接。点击下方按钮开启打印机电源：",
             "Restart": "重启Klipper",
             "ServiceReports": "{service} 报告"
         },
@@ -550,7 +586,7 @@
             "RunoutSensor": {
                 "Detected": "检测到",
                 "Disabled": "已关闭",
-                "Empty": "空"
+                "Empty": "无"
             }
         },
         "PowerControlPanel": {
@@ -562,10 +598,10 @@
         "StatusPanel": {
             "CancelPrint": "取消打印",
             "ClearPrintStats": "清除打印统计数据",
-            "Difference": "不同",
+            "Difference": "差异",
             "EmptyGcodes": "没有G-Code文件",
             "EmptyJobqueue": "当前任务队列中没有文件。",
-            "Estimate": "估算时间",
+            "Estimate": "估算剩余",
             "ETA": "预估完成",
             "ExcludeObject": {
                 "Cancel": "取消",
@@ -581,17 +617,29 @@
             "Headline": "状态",
             "Jobqueue": "任务队列({count})",
             "JobqueueMoreFiles": "没有任务 | 一个任务 | {count}个任务",
-            "Layer": "层",
+            "Layer": "打印层",
             "Max": "最高",
             "ObjectHeight": "物体高度",
+            "PauseAtLayer": {
+                "Abort": "取消",
+                "Accept": "接受",
+                "AtLayer": "所在层",
+                "Call": "调用",
+                "DescriptionPauseAtLayerActive": "此功能已激活，会在层{layer}时调用\"{call}\"。如果重复调用命令，此设置将会被覆盖。",
+                "DescriptionPauseNextLayerActive": "此功能已激活，将在下一层调用\"{call}\"。",
+                "Layer": "层",
+                "NextLayer": "下一层",
+                "PauseAtLayer": "在某层暂停",
+                "Type": "类型"
+            },
             "PausePrint": "暂停打印",
             "Print": "打印",
             "PrintTime": "打印耗时",
             "ReprintJob": "再次打印",
             "Requested": "请求",
             "ResumePrint": "恢复打印",
-            "Slicer": "切片时间",
-            "Speed": "速度",
+            "Slicer": "切片剩余",
+            "Speed": "打印速度",
             "Status": "状态",
             "Total": "已用时间",
             "Unknown": "未知"
@@ -628,7 +676,7 @@
             "Headline": "打印头",
             "PleaseConfigureSteps": "请配置步骤",
             "Position": "位置",
-            "QGL": "四轴调平(QGL)",
+            "QGL": "QGL",
             "Relative": "相对坐标",
             "SettingsInterfaceControl": "设置 > 界面 > 控制",
             "SpeedFactor": "速度倍数",
@@ -639,12 +687,12 @@
             "FPS": "帧率",
             "Headline": "摄像头",
             "NoWebcam": "没有可用的摄像头。在\"Mainsail设置\" -> \"摄像头\"添加新的摄像头。",
-            "UnknownWebcamService": "未知摄像头服务"
+            "UnknownWebcamService": "未知的摄像头服务"
         },
         "ZoffsetPanel": {
             "Clear": "清除",
             "Headline": "Z轴偏移",
-            "Later": "最后的",
+            "Later": "稍候再说",
             "Ok": "好的",
             "Save": "保存",
             "SaveConfig": "保存配置",
@@ -678,7 +726,7 @@
         "AddPrinter": "添加打印机",
         "AddPrintersToJson": "请将打印机添加到 config.json 。",
         "CannotConnectTo": "无法连接到{host} 。",
-        "ChangePrinter": "更换打印机",
+        "ChangePrinter": "切换打印机",
         "Connecting": "正在连接到{host}",
         "ConnectionFailed": "连接失败",
         "EditPrinter": "编辑打印机",
@@ -688,7 +736,7 @@
         "HostnameRequired": "需要配置主机名称/IP地址",
         "Port": "Moonraker服务端口",
         "PortRequired": "需要配置Moonraker服务端口",
-        "RememberToAdd": "请在moonraker.conf的'cors_domains'标签中添加{cors}",
+        "RememberToAdd": "请在moonraker.conf的'cors_domains'标签中添加'{cors}'",
         "SelectPrinter": "选择打印机",
         "TryAgain": "重试",
         "UpdatePrinter": "更新打印机",
@@ -751,7 +799,7 @@
             "Desktop": "桌面设备",
             "Mobile": "移动设备",
             "ResetLayout": "恢复默认设置",
-            "Tablet": "掌上设备",
+            "Tablet": "平板设备",
             "Widescreen": "宽屏设备"
         },
         "Edit": "编辑",
@@ -764,7 +812,10 @@
             "MoonrakerRestartInstance": "重启Moonraker实例",
             "MoonrakerRestartInstanceDescription": "编辑完Moonraker配置文件并按下\"保存并重启\"按钮后，重启哪个Moonraker服务。",
             "UseEscToClose": "使用ESC关闭编辑器",
-            "UseEscToCloseDescription": "允许使用ESC键关闭编辑器"
+            "UseEscToCloseDescription": "允许使用ESC键关闭编辑器",
+            "TabSize": "TAB长度",
+            "TabSizeDescription": "按下TAB键时，填充空格的数量",
+            "Spaces": "{count}个空格"
         },
         "GCodeViewerTab": {
             "BackgroundColor": "背景颜色",
@@ -781,16 +832,16 @@
             "24hours": "24-小时 ({time})",
             "Backup": "备份",
             "BackupDialog": "请选择你想要备份的内容：",
-            "CalcEstimateTime": "估算时间计算",
+            "CalcEstimateTime": "估算剩余时间",
             "CalcEstimateTimeDescription": "如果选择了多项，将会计算平均值",
-            "CalcEtaTime": "预计完成时间计算",
+            "CalcEtaTime": "估算计完成时间",
             "CalcEtaTimeDescription": "如果选择了多项，将会计算平均值",
-            "CalcPrintProgress": "打印进度估算",
+            "CalcPrintProgress": "估算打印进度",
             "CalcPrintProgressDescription": "计算打印进度的方法。",
             "CalcPrintProgressItems": {
-                "Filament": "耗材",
-                "FileAbsolute": "文件位置（绝对）",
-                "FileRelative": "文件位置（相对）",
+                "Filament": "耗材用量",
+                "FileAbsolute": "Gcode文件位置（绝对）",
+                "FileRelative": "Gcode文件位置（相对）",
                 "Slicer": "切片软件 (M73)"
             },
             "CannotReadJson": "无法读取/解析备份文件。",
@@ -802,14 +853,14 @@
             "DbView": "视图设置",
             "DbWebcams": "摄像头",
             "EstimateValues": {
-                "Filament": "耗材",
-                "File": "文件",
+                "Filament": "耗材用量",
+                "File": "Gcode文件",
                 "Slicer": "切片软件"
             },
             "FactoryDialog": "请选择想要恢复到默认值的项：",
             "FactoryReset": "恢复默认设置",
             "General": "通用",
-            "Language": "语言",
+            "Language": "界面语言",
             "MoonrakerDb": "Moonraker数据库",
             "PrinterName": "打印机名称",
             "Reset": "重启",
@@ -844,7 +895,7 @@
             "NOMacros": "没有发现宏...",
             "NoMacrosInGroup": "此分组内没有可用宏。",
             "Primary": "优先",
-            "Secondary": "其次",
+            "Secondary": "次要",
             "ShowInStatePaused": "如果打印机暂停，显示/隐藏此分组。",
             "ShowInStatePrinting": "如果打印机正在工作，显示/隐藏此分组。",
             "ShowInStateStandby": "如果打印机待机，显示/隐藏此分组。",
@@ -866,7 +917,7 @@
             "GroupSubTitle": "开始：{start}，结束：{end}",
             "LightGroups": "{name} - 分组",
             "LightPresets": "{name} - 预设",
-            "Miscellaneous": "杂项",
+            "Miscellaneous": "其他设置",
             "Name": "名称",
             "NoDevicesFound": "未找到设备",
             "NoGroupFound": "未找到分组",
@@ -876,6 +927,9 @@
             "StartDescription": "分组中第一个LED",
             "UnableToLoadLight": "无法加载灯",
             "UnableToLoadPreset": "无法加载预设"
+        },
+        "NavigationTab": {
+            "Navigation": "导航"
         },
         "PresetsTab": {
             "AddPreset": "添加预设",
@@ -902,7 +956,7 @@
             "Port": "Moonraker服务端口",
             "RemotePrinters": "打印机",
             "UpdatePrinter": "更新打印机",
-            "UseConfigJson": "检测到InstanceDB = JSON。请使用 config.json 来修改打印机列表。"
+            "UseConfigJson": "检测到InstanceDB参数为JSON。请使用 config.json 来修改打印机列表。"
         },
         "Store": "存储",
         "TimelapseTab": {
@@ -973,30 +1027,43 @@
             "VariableFpsMinDescription": ""
         },
         "UiSettingsTab": {
+            "BedScrewsDialog": "底板螺丝对话框",
+            "BedScrewsDialogDescription": "显示 BED_SCREWS_ADJUST 的辅助程序对话框。",
             "BoolBigThumbnail": "大缩略图",
             "BoolBigThumbnailDescription": "打印时在状态框中显示大缩略图",
             "BoolHideUploadAndPrintButton": "隐藏\"上传并打印\"按钮",
             "BoolHideUploadAndPrintButtonDescription": "在顶栏显示或者隐藏\"上传并打印\"按钮",
             "ConfirmOnEmergencyStop": "紧急停止需要确认",
             "ConfirmOnEmergencyStopDescription": "在按下\"紧急停止\"时显示确认对话框",
-            "ConfirmOnPowerDeviceChange": "设备电源变化时需要确认",
-            "ConfirmOnPowerDeviceChangeDescription": "在设备电源变化时显示确认对话框",
+            "ConfirmOnPowerDeviceChange": "控制设备电源时需要确认",
+            "ConfirmOnPowerDeviceChangeDescription": "控制设备电源时显示确认对话框",
+            "DisableFanAnimation": "关闭风扇动画",
+            "DisableFanAnimationDescription": "这会一定程度减少浏览器的资源消耗",
             "DisplayCANCEL_PRINT": "显示\"取消打印\"按钮",
             "DisplayCANCEL_PRINTDescription": "始终显示\"取消打印\"按钮",
             "GcodeThumbnails": "G-Code缩略图",
             "GcodeThumbnailsDescription": "单击\"指南\"按钮查看说明",
             "Guide": "指南",
+            "HideSaveConfigButtonForBedMesh": "仅bed_mesh更改时隐藏\"保存配置\"按钮",
+            "HideSaveConfigButtonForBedMeshDescription": "如果只有bed_mesh更改需要保存到Klipper时，隐藏\"保存配置\"按钮。",
             "LockSliders": "在触摸屏设备上锁定滑动条",
             "LockSlidersDelay": "滑动条锁定延迟时间",
             "LockSlidersDelayDescription": "滑动条将在给定延迟时间后锁定。如果设置为0或留空，滑动条将仅在页面更改/重新加载后锁定",
             "LockSlidersDescription": "在允许更改之前需要解锁触摸屏上的滑动条",
             "Logo": "Logo颜色",
+            "ManualProbeDialog": "手动Probe助手对话框",
+            "ManualProbeDialogDescription": "显示 PROBE_CALIBRATE 或 Z_ENDSTOP_CALIBRATE 的辅助程序对话框。",
             "NavigationStyle": "导航栏样式",
             "NavigationStyleDescription": "更改导航栏外观",
             "NavigationStyleIconsAndText": "图标+文字",
             "NavigationStyleIconsOnly": "仅图标",
+            "PowerDeviceName": "打印机电源设备",
+            "PowerDeviceNameDescription": "请选择可以控制打印机供电的Moonraker电源设备。",
             "Primary": "高亮颜色",
-            "ShowWebcamInNavigation": "在导航栏中显示摄像头",
+            "ScrewsTiltAdjustDialog": "螺丝倾斜调整对话框",
+            "ScrewsTiltAdjustDialogDescription": "显示 SCREWS_TILT_CALCULATE 的辅助程序对话框。",
+            "TempchartHeight": "温度图表高度",
+            "TempchartHeightDescription": "修改Dashboard上温度图表的高度。",
             "UiSettings": "UI设置"
         },
         "Update": "更新",
@@ -1016,8 +1083,11 @@
             "IconNozzle": "喷嘴",
             "IconPrinter": "打印机",
             "Ipstream": "IP摄像头",
-            "Mjpegstreamer": "MJPEG视频流",
-            "MjpegstreamerAdaptive": "自适应MJPEG视频流(试验性)",
+            "Hlsstream": "HLS视频流",
+            "WebrtcJanus": "WebRTC (janus-gateway)",
+            "Mjpegstreamer": "MJPEG-Streamer",
+            "MjpegstreamerAdaptive": "Adaptive MJPEG-Streamer (试验性)",
+            "JMuxerStream": "原始h264视频流 (jmuxer)",
             "Name": "名称",
             "NameAlreadyExists": "名称已经存在",
             "Required": "需要填写名称",
@@ -1030,8 +1100,17 @@
             "UrlStream": "视频流地址(URL)",
             "Uv4lMjpeg": "UV4L-MJPEG",
             "Vertically": "垂直",
-            "Webcams": "摄像头"
+            "Webcams": "摄像头",
+            "WebrtcCameraStreamer": "WebRTC (camera-streamer)",
+            "WebrtcMediaMTX": "WebRTC (MediaMTX / rtsp-simple-server)"
         }
+    },
+    "ScrewsTiltAdjust": {
+        "Accept": "接受",
+        "Base": "底座",
+        "ErrorText": "探测过程中出现了问题。",
+        "Headline": "螺丝倾斜调整",
+        "Retry": "重试"
     },
     "Timelapse": {
         "AllFiles": "全部文件",
@@ -1044,9 +1123,10 @@
         "DeleteDirectory": "删除文件夹",
         "DeleteDirectoryQuestion": "你确定要删除\"{name}\"文件夹和里面所有的文件吗？",
         "DeleteSelectedQuestion": "你确定要删除选中的{count}个文件吗？",
+        "DeleteSingleFileQuestion": "你确定要删除文件\"{name}\"吗？",
         "Download": "下载",
         "DuplicateLastframe": "重复最后一帧",
-        "Empty": "没有发现已完成的延时摄影文件",
+        "Empty": "没有已完成的延时摄影文件",
         "Enabled": "开启",
         "EstimatedLength": "预计时长",
         "Files": "每页显示文件数",

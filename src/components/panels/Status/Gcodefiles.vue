@@ -84,6 +84,12 @@
                     {{ $t('Files.AddToQueue') }}
                 </v-list-item>
                 <v-list-item
+                    v-if="moonrakerComponents.includes('job_queue')"
+                    @click="openAddBatchToQueueDialog(contextMenu.item)">
+                    <v-icon class="mr-1">{{ mdiPlaylistPlus }}</v-icon>
+                    {{ $t('Files.AddBatchToQueue') }}
+                </v-list-item>
+                <v-list-item
                     v-if="contextMenu.item.preheat_gcode !== null"
                     :disabled="['error', 'printing', 'paused'].includes(printer_state)"
                     @click="doSend(contextMenu.item.preheat_gcode)">
@@ -106,7 +112,7 @@
                     <v-icon class="mr-1">{{ mdiRenameBox }}</v-icon>
                     {{ $t('Files.Rename') }}
                 </v-list-item>
-                <v-list-item class="red--text" @click="removeFile(contextMenu.item)">
+                <v-list-item class="red--text" @click="deleteDialog = true">
                     <v-icon class="mr-1" color="error">{{ mdiDelete }}</v-icon>
                     {{ $t('Files.Delete') }}
                 </v-list-item>
@@ -114,7 +120,7 @@
         </v-menu>
         <v-dialog v-model="dialogRenameFile.show" :max-width="400">
             <panel
-                :title="$t('Files.RenameFile').toString()"
+                :title="$t('Files.RenameFile')"
                 card-class="dashboard-files-rename-file-dialog"
                 :margin-bottom="false">
                 <template #buttons>
@@ -137,6 +143,79 @@
                 </v-card-actions>
             </panel>
         </v-dialog>
+
+        <!-- CONFIRM DELETE FILE DIALOG -->
+        <v-dialog v-model="deleteDialog" max-width="400">
+            <panel :title="$t('Files.Delete')" card-class="gcode-files-delete-dialog" :margin-bottom="false">
+                <template #buttons>
+                    <v-btn icon tile @click="deleteDialog = false">
+                        <v-icon>{{ mdiCloseThick }}</v-icon>
+                    </v-btn>
+                </template>
+                <v-card-text>
+                    <p class="mb-0">
+                        {{ $t('Files.DeleteSingleFileQuestion', { name: filename }) }}
+                    </p>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="" text @click="deleteDialog = false">
+                        {{ $t('Files.Cancel') }}
+                    </v-btn>
+                    <v-btn color="error" text @click="removeFile">
+                        {{ $t('Files.Delete') }}
+                    </v-btn>
+                </v-card-actions>
+            </panel>
+        </v-dialog>
+
+        <v-dialog v-model="dialogAddBatchToQueue.show" max-width="400">
+            <panel
+                :title="$t('Files.AddToQueue')"
+                card-class="gcode-files-add-to-queue-dialog"
+                :icon="mdiPlaylistPlus"
+                :margin-bottom="false">
+                <template #buttons>
+                    <v-btn icon tile @click="dialogAddBatchToQueue.show = false">
+                        <v-icon>{{ mdiCloseThick }}</v-icon>
+                    </v-btn>
+                </template>
+
+                <v-card-text>
+                    <v-text-field
+                        ref="inputFieldAddToQueueCount"
+                        v-model="dialogAddBatchToQueue.count"
+                        :label="$t('Files.Count')"
+                        required
+                        hide-spin-buttons
+                        type="number"
+                        :rules="countInputRules"
+                        @keyup.enter="addBatchToQueueAction">
+                        <template #append-outer>
+                            <div class="_spin_button_group">
+                                <v-btn class="mt-n3" icon plain small @click="dialogAddBatchToQueue.count++">
+                                    <v-icon>{{ mdiChevronUp }}</v-icon>
+                                </v-btn>
+                                <v-btn
+                                    :disabled="dialogAddBatchToQueue.count <= 1"
+                                    class="mb-n3"
+                                    icon
+                                    plain
+                                    small
+                                    @click="dialogAddBatchToQueue.count--">
+                                    <v-icon>{{ mdiChevronDown }}</v-icon>
+                                </v-btn>
+                            </div>
+                        </template>
+                    </v-text-field>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="" text @click="dialogAddBatchToQueue.show = false">{{ $t('Files.Cancel') }}</v-btn>
+                    <v-btn color="primary" text @click="addBatchToQueueAction">{{ $t('Files.AddToQueue') }}</v-btn>
+                </v-card-actions>
+            </panel>
+        </v-dialog>
     </v-card>
 </template>
 
@@ -148,6 +227,8 @@ import ControlMixin from '@/components/mixins/control'
 import { FileStateGcodefile } from '@/store/files/types'
 import StartPrintDialog from '@/components/dialogs/StartPrintDialog.vue'
 import {
+    mdiChevronDown,
+    mdiChevronUp,
     mdiFile,
     mdiPlay,
     mdiPlaylistPlus,
@@ -159,6 +240,7 @@ import {
     mdiDelete,
     mdiCloseThick,
 } from '@mdi/js'
+import Panel from '@/components/ui/Panel.vue'
 
 interface dialogRenameObject {
     show: boolean
@@ -166,12 +248,21 @@ interface dialogRenameObject {
     item: FileStateGcodefile
 }
 
+interface dialogAddBatchToQueue {
+    show: boolean
+    count: number
+    item: FileStateGcodefile
+}
+
 @Component({
     components: {
+        Panel,
         StartPrintDialog,
     },
 })
 export default class StatusPanelGcodefiles extends Mixins(BaseMixin, ControlMixin) {
+    mdiChevronDown = mdiChevronDown
+    mdiChevronUp = mdiChevronUp
     mdiFile = mdiFile
     mdiPlay = mdiPlay
     mdiPlaylistPlus = mdiPlaylistPlus
@@ -183,6 +274,7 @@ export default class StatusPanelGcodefiles extends Mixins(BaseMixin, ControlMixi
     mdiDelete = mdiDelete
     mdiCloseThick = mdiCloseThick
 
+    private deleteDialog = false
     private showDialogBool = false
     private dialogFile: FileStateGcodefile = {
         isDirectory: false,
@@ -199,6 +291,7 @@ export default class StatusPanelGcodefiles extends Mixins(BaseMixin, ControlMixi
         last_status: null,
         last_start_time: null,
         last_total_duration: null,
+        preheat_gcode: null,
     }
     private currentPath = ''
     private contentTdWidth = 100
@@ -222,6 +315,17 @@ export default class StatusPanelGcodefiles extends Mixins(BaseMixin, ControlMixi
         item: { ...this.dialogFile },
     }
 
+    private dialogAddBatchToQueue: dialogAddBatchToQueue = {
+        show: false,
+        count: 1,
+        item: { ...this.contextMenu.item },
+    }
+
+    private countInputRules = [
+        (value: string) => !!value || this.$t('JobQueue.InvalidCountEmpty'),
+        (value: string) => parseInt(value) > 0 || this.$t('JobQueue.InvalidCountGreaterZero'),
+    ]
+
     get gcodeFiles() {
         let gcodes = this.$store.getters['files/getAllGcodes'] ?? []
         gcodes = gcodes
@@ -241,6 +345,11 @@ export default class StatusPanelGcodefiles extends Mixins(BaseMixin, ControlMixi
         })
 
         return gcodes
+    }
+
+    get filename() {
+        const filename = this.contextMenu.item.filename.split('/')
+        return filename[filename.length - 1]
     }
 
     get styleContentTdWidth() {
@@ -343,6 +452,26 @@ export default class StatusPanelGcodefiles extends Mixins(BaseMixin, ControlMixi
         this.$store.dispatch('server/jobQueue/addToQueue', [item.filename])
     }
 
+    openAddBatchToQueueDialog(item: FileStateGcodefile) {
+        this.dialogAddBatchToQueue.show = true
+        this.dialogAddBatchToQueue.count = 1
+        this.dialogAddBatchToQueue.item = item
+    }
+
+    async addBatchToQueueAction() {
+        let filename = [this.currentPath, this.dialogAddBatchToQueue.item.filename].join('/')
+        if (filename.startsWith('/')) filename = filename.slice(1)
+
+        const array: string[] = []
+        for (let i = 0; i < this.dialogAddBatchToQueue.count; i++) {
+            array.push(filename)
+        }
+
+        await this.$store.dispatch('server/jobQueue/addToQueue', array)
+
+        this.dialogAddBatchToQueue.show = false
+    }
+
     view3D(item: FileStateGcodefile) {
         this.$router.push({ path: '/viewer', query: { filename: 'gcodes/' + item.filename } })
     }
@@ -393,12 +522,14 @@ export default class StatusPanelGcodefiles extends Mixins(BaseMixin, ControlMixi
         )
     }
 
-    removeFile(item: FileStateGcodefile) {
+    removeFile() {
         this.$socket.emit(
             'server.files.delete_file',
-            { path: 'gcodes/' + item.filename },
+            { path: 'gcodes/' + this.contextMenu.item.filename },
             { action: 'files/getDeleteFile' }
         )
+
+        this.deleteDialog = false
     }
 
     mounted() {
@@ -419,8 +550,15 @@ export default class StatusPanelGcodefiles extends Mixins(BaseMixin, ControlMixi
 }
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
 .filesGcodeCard {
     position: relative;
+}
+
+._spin_button_group {
+    width: 24px;
+    margin-top: -6px;
+    margin-left: -6px;
+    margin-bottom: -6px;
 }
 </style>

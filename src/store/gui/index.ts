@@ -10,10 +10,11 @@ import { console } from '@/store/gui/console'
 import { gcodehistory } from '@/store/gui/gcodehistory'
 import { macros } from '@/store/gui/macros'
 import { miscellaneous } from '@/store/gui/miscellaneous'
+import { navigation } from '@/store/gui/navigation'
+import { notifications } from '@/store/gui/notifications'
 import { presets } from '@/store/gui/presets'
 import { remoteprinters } from '@/store/gui/remoteprinters'
 import { webcams } from '@/store/gui/webcams'
-import { notifications } from '@/store/gui/notifications'
 
 export const getDefaultState = (): GuiState => {
     return {
@@ -110,6 +111,7 @@ export const getDefaultState = (): GuiState => {
             escToClose: true,
             confirmUnsavedChanges: true,
             klipperRestartMethod: 'FIRMWARE_RESTART',
+            tabSize: 2,
             moonrakerRestartInstance: null,
         },
         gcodeViewer: {
@@ -138,6 +140,11 @@ export const getDefaultState = (): GuiState => {
                 axis_minimum: null,
                 axis_maximum: null,
             },
+            showGCodePanel: false,
+            cncMode: false,
+        },
+        navigation: {
+            entries: [],
         },
         uiSettings: {
             logo: defaultLogoColor,
@@ -150,8 +157,15 @@ export const getDefaultState = (): GuiState => {
             boolBigThumbnail: true,
             boolWideNavDrawer: false,
             boolHideUploadAndPrintButton: false,
-            boolWebcamNavi: false,
             navigationStyle: 'iconsAndText',
+            powerDeviceName: null,
+            hideSaveConfigForBedMash: false,
+            disableFanAnimation: false,
+            boolManualProbeDialog: true,
+            boolBedScrewsDialog: true,
+            boolScrewsTiltAdjustDialog: true,
+            tempchartHeight: 250,
+            hideUpdateWarnings: false,
         },
         view: {
             blockFileUpload: false,
@@ -199,6 +213,7 @@ export const getDefaultState = (): GuiState => {
             },
             history: {
                 countPerPage: 10,
+                toggleChartCol2: 'chart',
                 toggleChartCol3: 'filament_usage',
                 hidePrintStatus: [],
                 hideColums: [
@@ -257,6 +272,7 @@ export const gui: Module<GuiState, any> = {
         gcodehistory,
         macros,
         miscellaneous,
+        navigation,
         notifications,
         presets,
         remoteprinters,

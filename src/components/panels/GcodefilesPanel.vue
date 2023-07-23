@@ -1,9 +1,6 @@
 <template>
     <div>
-        <panel
-            :title="$t('Files.GCodeFiles').toString()"
-            :icon="mdiFileDocumentMultipleOutline"
-            card-class="gcode-files-panel">
+        <panel :title="$t('Files.GCodeFiles')" :icon="mdiFileDocumentMultipleOutline" card-class="gcode-files-panel">
             <v-card-text>
                 <v-row>
                     <v-col class="col-12 d-flex align-center">
@@ -18,6 +15,15 @@
                             dense
                             style="max-width: 300px"></v-text-field>
                         <v-spacer></v-spacer>
+                        <v-btn
+                            v-if="selectedFiles.length"
+                            :title="$t('Files.Download')"
+                            color="primary"
+                            class="px-2 minwidth-0 ml-3"
+                            :loading="loadings.includes('gcodeDownloadZip')"
+                            @click="downloadSelectedFiles">
+                            <v-icon>{{ mdiCloudDownload }}</v-icon>
+                        </v-btn>
                         <v-btn
                             v-if="selectedFiles.length"
                             :title="$t('Files.Delete')"
@@ -316,6 +322,13 @@
                     {{ $t('Files.AddToQueue') }}
                 </v-list-item>
                 <v-list-item
+                    v-if="!contextMenu.item.isDirectory && moonrakerComponents.includes('job_queue')"
+                    :disabled="!isGcodeFile(contextMenu.item)"
+                    @click="openAddBatchToQueueDialog(contextMenu.item)">
+                    <v-icon class="mr-1">{{ mdiPlaylistPlus }}</v-icon>
+                    {{ $t('Files.AddBatchToQueue') }}
+                </v-list-item>
+                <v-list-item
                     v-if="contextMenu.item.preheat_gcode !== null"
                     :disabled="['error', 'printing', 'paused'].includes(printer_state)"
                     @click="doSend(contextMenu.item.preheat_gcode)">
@@ -328,6 +341,13 @@
                     @click="view3D(contextMenu.item)">
                     <v-icon class="mr-1">{{ mdiVideo3d }}</v-icon>
                     {{ $t('Files.View3D') }}
+                </v-list-item>
+                <v-list-item
+                    v-if="!contextMenu.item.isDirectory"
+                    :disabled="!isGcodeFile(contextMenu.item)"
+                    @click="scanMeta(contextMenu.item)">
+                    <v-icon class="mr-1">{{ mdiMagnify }}</v-icon>
+                    {{ $t('Files.ScanMeta') }}
                 </v-list-item>
                 <v-list-item v-if="!contextMenu.item.isDirectory" @click="downloadFile">
                     <v-icon class="mr-1">{{ mdiCloudDownload }}</v-icon>
@@ -345,7 +365,11 @@
                     <v-icon class="mr-1">{{ mdiRenameBox }}</v-icon>
                     {{ $t('Files.Rename') }}
                 </v-list-item>
-                <v-list-item v-if="!contextMenu.item.isDirectory" class="red--text" @click="removeFile">
+                <v-list-item v-if="!contextMenu.item.isDirectory" @click="duplicateFile(contextMenu.item)">
+                    <v-icon class="mr-1">{{ mdiContentCopy }}</v-icon>
+                    {{ $t('Files.Duplicate') }}
+                </v-list-item>
+                <v-list-item v-if="!contextMenu.item.isDirectory" class="red--text" @click="deleteDialog = true">
                     <v-icon class="mr-1" color="error">{{ mdiDelete }}</v-icon>
                     {{ $t('Files.Delete') }}
                 </v-list-item>
@@ -360,7 +384,7 @@
         </v-menu>
         <v-dialog v-model="dialogCreateDirectory.show" :max-width="400">
             <panel
-                :title="$t('Files.NewDirectory').toString()"
+                :title="$t('Files.NewDirectory')"
                 card-class="gcode-files-new-directory-dialog"
                 :margin-bottom="false">
                 <template #buttons>
@@ -375,7 +399,7 @@
                         :label="$t('Files.Name')"
                         required
                         :rules="nameInputRules"
-                        @update:error="isInvalidName = !isInvalidName"
+                        @update:error="(bool) => (isInvalidName = bool)"
                         @keypress.enter="createDirectoryAction"></v-text-field>
                 </v-card-text>
                 <v-card-actions>
@@ -388,10 +412,7 @@
             </panel>
         </v-dialog>
         <v-dialog v-model="dialogRenameFile.show" :max-width="400">
-            <panel
-                :title="$t('Files.RenameFile').toString()"
-                card-class="gcode-files-rename-file-dialog"
-                :margin-bottom="false">
+            <panel :title="$t('Files.RenameFile')" card-class="gcode-files-rename-file-dialog" :margin-bottom="false">
                 <template #buttons>
                     <v-btn icon tile @click="dialogRenameFile.show = false">
                         <v-icon>{{ mdiCloseThick }}</v-icon>
@@ -401,10 +422,10 @@
                     <v-text-field
                         ref="inputFieldRenameFile"
                         v-model="dialogRenameFile.newName"
-                        :label="$t('Files.Name').toString()"
+                        :label="$t('Files.Name')"
                         required
                         :rules="nameInputRules"
-                        @update:error="isInvalidName = !isInvalidName"
+                        @update:error="(bool) => (isInvalidName = bool)"
                         @keyup.enter="renameFileAction"></v-text-field>
                 </v-card-text>
                 <v-card-actions>
@@ -416,9 +437,38 @@
                 </v-card-actions>
             </panel>
         </v-dialog>
+        <v-dialog v-model="dialogDuplicateFile.show" :max-width="400">
+            <panel
+                :title="$t('Files.DuplicateFile')"
+                card-class="gcode-files-duplicate-file-dialog"
+                :margin-bottom="false">
+                <template #buttons>
+                    <v-btn icon tile @click="dialogDuplicateFile.show = false">
+                        <v-icon>{{ mdiCloseThick }}</v-icon>
+                    </v-btn>
+                </template>
+                <v-card-text>
+                    <v-text-field
+                        ref="inputFieldDuplicateFile"
+                        v-model="dialogDuplicateFile.newName"
+                        :label="$t('Files.Name')"
+                        required
+                        :rules="nameInputRules"
+                        @update:error="(bool) => (isInvalidName = bool)"
+                        @keyup.enter="duplicateFileAction"></v-text-field>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="" text @click="dialogDuplicateFile.show = false">{{ $t('Files.Cancel') }}</v-btn>
+                    <v-btn :disabled="isInvalidName" color="primary" text @click="duplicateFileAction">
+                        {{ $t('Files.Duplicate') }}
+                    </v-btn>
+                </v-card-actions>
+            </panel>
+        </v-dialog>
         <v-dialog v-model="dialogRenameDirectory.show" max-width="400">
             <panel
-                :title="$t('Files.RenameDirectory').toString()"
+                :title="$t('Files.RenameDirectory')"
                 card-class="gcode-files-rename-directory-dialog"
                 :margin-bottom="false">
                 <template #buttons>
@@ -433,7 +483,7 @@
                         :label="$t('Files.Name')"
                         required
                         :rules="nameInputRules"
-                        @update:error="isInvalidName = !isInvalidName"
+                        @update:error="(bool) => (isInvalidName = bool)"
                         @keyup.enter="renameDirectoryAction"></v-text-field>
                 </v-card-text>
                 <v-card-actions>
@@ -447,7 +497,7 @@
         </v-dialog>
         <v-dialog v-model="dialogDeleteDirectory.show" max-width="400">
             <panel
-                :title="$t('Files.DeleteDirectory').toString()"
+                :title="$t('Files.DeleteDirectory')"
                 card-class="gcode-files-delete-directory-dialog"
                 :margin-bottom="false">
                 <template #buttons>
@@ -467,23 +517,97 @@
                 </v-card-actions>
             </panel>
         </v-dialog>
+
+        <!-- CONFIRM DELETE SINGLE FILE DIALOG -->
+        <v-dialog v-model="deleteDialog" max-width="400">
+            <panel :title="$t('Files.Delete')" card-class="gcode-files-delete-dialog" :margin-bottom="false">
+                <template #buttons>
+                    <v-btn icon tile @click="deleteDialog = false">
+                        <v-icon>{{ mdiCloseThick }}</v-icon>
+                    </v-btn>
+                </template>
+                <v-card-text>
+                    <p class="mb-0">
+                        {{ $t('Files.DeleteSingleFileQuestion', { name: contextMenu.item.filename }) }}
+                    </p>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="" text @click="deleteDialog = false">
+                        {{ $t('Files.Cancel') }}
+                    </v-btn>
+                    <v-btn color="error" text @click="removeFile">
+                        {{ $t('Files.Delete') }}
+                    </v-btn>
+                </v-card-actions>
+            </panel>
+        </v-dialog>
+
+        <!-- CONFIRM DELETE MULTIPLE FILES DIALOG -->
         <v-dialog v-model="deleteSelectedDialog" max-width="400">
-            <panel
-                :title="$t('Files.Delete').toString()"
-                card-class="gcode-files-delete-selected-dialog"
-                :margin-bottom="false">
+            <panel :title="$t('Files.Delete')" card-class="gcode-files-delete-selected-dialog" :margin-bottom="false">
                 <template #buttons>
                     <v-btn icon tile @click="deleteSelectedDialog = false">
                         <v-icon>{{ mdiCloseThick }}</v-icon>
                     </v-btn>
                 </template>
                 <v-card-text>
-                    <p class="mb-0">{{ $t('Files.DeleteSelectedQuestion', { count: selectedFiles.length }) }}</p>
+                    <p v-if="selectedFiles.length === 1" class="mb-0">
+                        {{ $t('Files.DeleteSingleFileQuestion', { name: selectedFiles[0].filename }) }}
+                    </p>
+                    <p v-else class="mb-0">{{ $t('Files.DeleteSelectedQuestion', { count: selectedFiles.length }) }}</p>
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
                     <v-btn color="" text @click="deleteSelectedDialog = false">{{ $t('Files.Cancel') }}</v-btn>
                     <v-btn color="error" text @click="deleteSelectedFiles">{{ $t('Files.Delete') }}</v-btn>
+                </v-card-actions>
+            </panel>
+        </v-dialog>
+        <v-dialog v-model="dialogAddBatchToQueue.show" max-width="400">
+            <panel
+                :title="$t('Files.AddToQueue')"
+                card-class="gcode-files-add-to-queue-dialog"
+                :icon="mdiPlaylistPlus"
+                :margin-bottom="false">
+                <template #buttons>
+                    <v-btn icon tile @click="dialogAddBatchToQueue.show = false">
+                        <v-icon>{{ mdiCloseThick }}</v-icon>
+                    </v-btn>
+                </template>
+
+                <v-card-text>
+                    <v-text-field
+                        ref="inputFieldAddToQueueCount"
+                        v-model="dialogAddBatchToQueue.count"
+                        :label="$t('Files.Count')"
+                        required
+                        hide-spin-buttons
+                        type="number"
+                        :rules="countInputRules"
+                        @keyup.enter="addBatchToQueueAction">
+                        <template #append-outer>
+                            <div class="_spin_button_group">
+                                <v-btn class="mt-n3" icon plain small @click="dialogAddBatchToQueue.count++">
+                                    <v-icon>{{ mdiChevronUp }}</v-icon>
+                                </v-btn>
+                                <v-btn
+                                    :disabled="dialogAddBatchToQueue.count <= 1"
+                                    class="mb-n3"
+                                    icon
+                                    plain
+                                    small
+                                    @click="dialogAddBatchToQueue.count--">
+                                    <v-icon>{{ mdiChevronDown }}</v-icon>
+                                </v-btn>
+                            </div>
+                        </template>
+                    </v-text-field>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="" text @click="dialogAddBatchToQueue.show = false">{{ $t('Files.Cancel') }}</v-btn>
+                    <v-btn color="primary" text @click="addBatchToQueueAction">{{ $t('Files.AddToQueue') }}</v-btn>
                 </v-card-actions>
             </panel>
         </v-dialog>
@@ -500,6 +624,8 @@ import Panel from '@/components/ui/Panel.vue'
 import SettingsRow from '@/components/settings/SettingsRow.vue'
 import draggable from 'vuedraggable'
 import {
+    mdiChevronDown,
+    mdiChevronUp,
     mdiDragVertical,
     mdiCheckboxBlankOutline,
     mdiCheckboxMarked,
@@ -521,6 +647,7 @@ import {
     mdiUpload,
     mdiVideo3d,
     mdiFileDocumentEditOutline,
+    mdiContentCopy,
 } from '@mdi/js'
 import StartPrintDialog from '@/components/dialogs/StartPrintDialog.vue'
 import ControlMixin from '@/components/mixins/control'
@@ -540,6 +667,12 @@ interface draggingFile {
 
 interface dialogPrintFile {
     show: boolean
+    item: FileStateGcodefile
+}
+
+interface dialogAddBatchToQueue {
+    show: boolean
+    count: number
     item: FileStateGcodefile
 }
 
@@ -563,6 +696,9 @@ interface tableColumnSetting {
     components: { StartPrintDialog, Panel, SettingsRow, draggable },
 })
 export default class GcodefilesPanel extends Mixins(BaseMixin, ControlMixin) {
+    mdiChevronDown = mdiChevronDown
+    mdiChevronUp = mdiChevronUp
+    mdiContentCopy = mdiContentCopy
     mdiFile = mdiFile
     mdiFileDocumentMultipleOutline = mdiFileDocumentMultipleOutline
     mdiMagnify = mdiMagnify
@@ -592,6 +728,7 @@ export default class GcodefilesPanel extends Mixins(BaseMixin, ControlMixin) {
     declare $refs: {
         fileUpload: HTMLInputElement
         inputFieldRenameFile: HTMLInputElement
+        inputFieldDuplicateFile: HTMLInputElement
         inputFieldCreateDirectory: HTMLInputElement
         inputFieldRenameDirectory: HTMLInputElement
     }
@@ -637,7 +774,19 @@ export default class GcodefilesPanel extends Mixins(BaseMixin, ControlMixin) {
         item: { ...this.contextMenu.item },
     }
 
+    private dialogAddBatchToQueue: dialogAddBatchToQueue = {
+        show: false,
+        count: 1,
+        item: { ...this.contextMenu.item },
+    }
+
     private dialogRenameFile: dialogRenameObject = {
+        show: false,
+        newName: '',
+        item: { ...this.contextMenu.item },
+    }
+
+    private dialogDuplicateFile: dialogRenameObject = {
         show: false,
         newName: '',
         item: { ...this.contextMenu.item },
@@ -655,6 +804,7 @@ export default class GcodefilesPanel extends Mixins(BaseMixin, ControlMixin) {
         item: { ...this.contextMenu.item },
     }
 
+    private deleteDialog = false
     private deleteSelectedDialog = false
 
     private isInvalidName = true
@@ -662,9 +812,13 @@ export default class GcodefilesPanel extends Mixins(BaseMixin, ControlMixin) {
         (value: string) => !!value || this.$t('Files.InvalidNameEmpty'),
         (value: string) => !this.existsFilename(value) || this.$t('Files.InvalidNameAlreadyExists'),
     ]
+    private countInputRules = [
+        (value: string) => !!value || this.$t('JobQueue.InvalidCountEmpty'),
+        (value: string) => parseInt(value) > 0 || this.$t('JobQueue.InvalidCountGreaterZero'),
+    ]
 
     existsFilename(name: string) {
-        return this.files.findIndex((file) => file.filename === name) >= 0
+        return this.files.findIndex((file: FileStateFile) => file.filename === name) >= 0
     }
 
     get gcodeInputFileAccept() {
@@ -1088,11 +1242,31 @@ export default class GcodefilesPanel extends Mixins(BaseMixin, ControlMixin) {
         this.currentPath = this.currentPath.slice(0, this.currentPath.lastIndexOf('/'))
     }
 
-    addToQueue(item: FileStateGcodefile | FileStateFile) {
+    async addToQueue(item: FileStateGcodefile) {
         let filename = [this.currentPath, item.filename].join('/')
         if (filename.startsWith('/')) filename = filename.slice(1)
 
-        this.$store.dispatch('server/jobQueue/addToQueue', [filename])
+        await this.$store.dispatch('server/jobQueue/addToQueue', [filename])
+    }
+
+    openAddBatchToQueueDialog(item: FileStateGcodefile) {
+        this.dialogAddBatchToQueue.show = true
+        this.dialogAddBatchToQueue.count = 1
+        this.dialogAddBatchToQueue.item = item
+    }
+
+    async addBatchToQueueAction() {
+        let filename = [this.currentPath, this.dialogAddBatchToQueue.item.filename].join('/')
+        if (filename.startsWith('/')) filename = filename.slice(1)
+
+        const array: string[] = []
+        for (let i = 0; i < this.dialogAddBatchToQueue.count; i++) {
+            array.push(filename)
+        }
+
+        await this.$store.dispatch('server/jobQueue/addToQueue', array)
+
+        this.dialogAddBatchToQueue.show = false
     }
 
     changeMetadataVisible(name: string, value: boolean) {
@@ -1129,6 +1303,36 @@ export default class GcodefilesPanel extends Mixins(BaseMixin, ControlMixin) {
         window.open(href)
     }
 
+    async downloadSelectedFiles() {
+        let items: string[] = []
+
+        const addElementToItems = async (absolutPath: string, directory: FileStateFile[]) => {
+            for (const file of directory) {
+                const filePath = `${absolutPath}/${file.filename}`
+
+                if (file.isDirectory && file.childrens) {
+                    await addElementToItems(filePath, file.childrens)
+
+                    continue
+                }
+
+                items.push(filePath)
+            }
+        }
+
+        await addElementToItems('gcodes/' + this.currentPath, this.selectedFiles)
+        const date = new Date()
+        const timestamp = `${date.getFullYear()}${date.getMonth()}${date.getDay()}-${date.getHours()}${date.getMinutes()}${date.getSeconds()}`
+
+        this.$socket.emit(
+            'server.files.zip',
+            { items, dest: `config/gcodes-${timestamp}.zip` },
+            { action: 'files/downloadZip', loading: 'gcodeDownloadZip' }
+        )
+
+        this.selectedFiles = []
+    }
+
     renameFile(item: FileStateGcodefile) {
         this.dialogRenameFile.item = item
         this.dialogRenameFile.newName = item.filename
@@ -1149,6 +1353,24 @@ export default class GcodefilesPanel extends Mixins(BaseMixin, ControlMixin) {
             },
             { action: 'files/getMove' }
         )
+    }
+
+    duplicateFile(item: FileStateGcodefile) {
+        this.dialogDuplicateFile.item = item
+        this.dialogDuplicateFile.newName = item.filename
+        this.dialogDuplicateFile.show = true
+
+        setTimeout(() => {
+            this.$refs.inputFieldDuplicateFile?.focus()
+        }, 200)
+    }
+
+    duplicateFileAction() {
+        this.dialogDuplicateFile.show = false
+        this.$socket.emit('server.files.copy', {
+            source: 'gcodes' + this.currentPath + '/' + this.dialogDuplicateFile.item.filename,
+            dest: 'gcodes' + this.currentPath + '/' + this.dialogDuplicateFile.newName,
+        })
     }
 
     renameDirectory(item: FileStateGcodefile) {
@@ -1179,6 +1401,8 @@ export default class GcodefilesPanel extends Mixins(BaseMixin, ControlMixin) {
             { path: 'gcodes' + this.currentPath + '/' + this.contextMenu.item.filename },
             { action: 'files/getDeleteFile' }
         )
+
+        this.deleteDialog = false
     }
 
     deleteDirectory(item: FileStateGcodefile) {
@@ -1243,6 +1467,12 @@ export default class GcodefilesPanel extends Mixins(BaseMixin, ControlMixin) {
         this.$router.push({ path: '/viewer', query: { filename: 'gcodes' + this.currentPath + '/' + item.filename } })
     }
 
+    scanMeta(item: FileStateFile) {
+        this.$store.dispatch('files/scanMetadata', {
+            filename: 'gcodes' + this.currentPath + '/' + item.filename,
+        })
+    }
+
     deleteSelectedFiles() {
         this.selectedFiles.forEach((item: FileStateGcodefile) => {
             if (item.isDirectory) {
@@ -1296,6 +1526,15 @@ export default class GcodefilesPanel extends Mixins(BaseMixin, ControlMixin) {
     }
 }
 </script>
+
+<style scoped>
+._spin_button_group {
+    width: 24px;
+    margin-top: -6px;
+    margin-left: -6px;
+    margin-bottom: -6px;
+}
+</style>
 
 <style>
 /*noinspection CssUnusedSymbol*/

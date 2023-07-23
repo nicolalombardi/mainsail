@@ -34,13 +34,15 @@
                     <router-view></router-view>
                 </v-container>
             </v-main>
-            <the-update-dialog></the-update-dialog>
-            <the-editor></the-editor>
-            <the-timelapse-rendering-snackbar></the-timelapse-rendering-snackbar>
-            <the-fullscreen-upload></the-fullscreen-upload>
-            <the-upload-snackbar></the-upload-snackbar>
+            <the-service-worker />
+            <the-update-dialog />
+            <the-editor />
+            <the-timelapse-rendering-snackbar />
+            <the-fullscreen-upload />
+            <the-upload-snackbar />
             <the-manual-probe-dialog />
             <the-bed-screws-dialog />
+            <the-screws-tilt-adjust-dialog />
         </template>
         <the-select-printer-dialog v-else-if="instancesDB !== 'moonraker'"></the-select-printer-dialog>
         <the-connecting-dialog v-else></the-connecting-dialog>
@@ -63,6 +65,9 @@ import TheFullscreenUpload from '@/components/TheFullscreenUpload.vue'
 import TheUploadSnackbar from '@/components/TheUploadSnackbar.vue'
 import TheManualProbeDialog from '@/components/dialogs/TheManualProbeDialog.vue'
 import TheBedScrewsDialog from '@/components/dialogs/TheBedScrewsDialog.vue'
+import TheScrewsTiltAdjustDialog from '@/components/dialogs/TheScrewsTiltAdjustDialog.vue'
+
+Component.registerHooks(['metaInfo'])
 
 @Component({
     components: {
@@ -77,15 +82,21 @@ import TheBedScrewsDialog from '@/components/dialogs/TheBedScrewsDialog.vue'
         TheUploadSnackbar,
         TheManualProbeDialog,
         TheBedScrewsDialog,
-    },
-    metaInfo() {
-        const title = this.$store.getters['getTitle']
-        return {
-            titleTemplate: () => title,
-        }
+        TheScrewsTiltAdjustDialog,
     },
 })
 export default class App extends Mixins(BaseMixin) {
+    public metaInfo(): any {
+        let title = this.$store.getters['getTitle']
+
+        if (this.isPrinterPowerOff) title = this.$t('App.Titles.PrinterOff')
+
+        return {
+            title,
+            titleTemplate: '%s',
+        }
+    }
+
     get title(): string {
         return this.$store.getters['getTitle']
     }
@@ -159,7 +170,7 @@ export default class App extends Mixins(BaseMixin) {
     }
 
     get print_percent(): number {
-        return Math.round(this.$store.getters['printer/getPrintPercent'] * 100)
+        return Math.floor(this.$store.getters['printer/getPrintPercent'] * 100)
     }
 
     @Watch('language')
@@ -184,8 +195,9 @@ export default class App extends Mixins(BaseMixin) {
 
     @Watch('current_file')
     current_fileChanged(newVal: string): void {
-        if (newVal !== '')
-            this.$socket.emit('server.files.metadata', { filename: newVal }, { action: 'files/getMetadataCurrentFile' })
+        if (newVal === '') return
+
+        this.$socket.emit('server.files.metadata', { filename: newVal }, { action: 'files/getMetadataCurrentFile' })
     }
 
     @Watch('primaryColor')

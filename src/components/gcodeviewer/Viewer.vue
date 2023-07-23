@@ -19,8 +19,18 @@
             </template>
             <v-card-text>
                 <v-row :class="showScrubber ? 'withScrubber' : ''">
-                    <v-col>
+                    <v-col :cols="showGCode ? 8 : 12">
                         <div ref="viewerCanvasContainer"></div>
+                    </v-col>
+                    <v-col v-show="showGCode" cols="4">
+                        <div class="viewer">
+                            <CodeStream
+                                ref="gcodestream"
+                                :shown="showGCode"
+                                :currentline.sync="scrubPosition"
+                                :document="fileData"
+                                :is-simulating="!printerIsPrinting" />
+                        </div>
                     </v-col>
                 </v-row>
                 <v-row v-show="showScrubber" class="scrubber">
@@ -123,6 +133,14 @@
                                                 hide-details
                                                 :label="$t('GCodeViewer.ShowTravelMoves')"></v-checkbox>
                                         </v-list-item>
+                                        <v-list-item class="minHeight36">
+                                            <v-checkbox
+                                                v-model="showGCode"
+                                                class="mt-0"
+                                                hide-details
+                                                :label="$t('GCodeViewer.ShowGCode')"></v-checkbox>
+                                        </v-list-item>
+
                                         <v-list-item
                                             v-if="loadedFile === sdCardFilePath && printing_objects.length"
                                             class="minHeight36">
@@ -167,6 +185,13 @@
                                                 class="mt-0"
                                                 hide-details
                                                 :label="$t('GCodeViewer.SpecularLighting')"></v-checkbox>
+                                        </v-list-item>
+                                        <v-list-item class="minHeight36">
+                                            <v-checkbox
+                                                v-model="cncMode"
+                                                class="mt-0"
+                                                hide-details
+                                                :label="$t('GCodeViewer.CNCMode')"></v-checkbox>
                                         </v-list-item>
                                     </v-list>
                                 </v-menu>
@@ -255,6 +280,7 @@ import GCodeViewer from '@sindarius/gcodeviewer'
 import axios from 'axios'
 import { formatFilesize } from '@/plugins/helpers'
 import Panel from '@/components/ui/Panel.vue'
+import CodeStream from '@/components/gcodeviewer/CodeStream.vue'
 import {
     mdiCameraRetake,
     mdiCog,
@@ -286,7 +312,7 @@ interface downloadSnackbar {
 
 let viewer: any = null
 @Component({
-    components: { Panel },
+    components: { Panel, CodeStream },
 })
 export default class Viewer extends Mixins(BaseMixin) {
     /**
@@ -342,6 +368,8 @@ export default class Viewer extends Mixins(BaseMixin) {
         name: '',
     }
 
+    private fileData: string = ''
+
     @Prop({ type: String, default: '', required: false }) declare filename: string
     @Ref('fileInput') declare fileInput: HTMLInputElement
     @Ref('viewerCanvasContainer') declare viewerCanvasContainer: HTMLElement
@@ -366,6 +394,9 @@ export default class Viewer extends Mixins(BaseMixin) {
         await this.init()
 
         if (this.loadedFile !== null) this.scrubFileSize = viewer.fileSize
+        if (viewer) {
+            this.fileData = viewer.fileData
+        }
     }
 
     beforeDestroy() {
@@ -405,8 +436,21 @@ export default class Viewer extends Mixins(BaseMixin) {
         return this.$store.state.printer.print_stats?.filename ?? ''
     }
 
-    get currentPosition() {
+    get livePosition() {
         return this.$store.state.printer.motion_report?.live_position ?? [0, 0, 0, 0]
+    }
+
+    get gcodeOffset() {
+        return this.$store.state.printer?.gcode_move?.homing_origin ?? [0, 0, 0]
+    }
+
+    get currentPosition() {
+        return [
+            this.livePosition[0] - this.gcodeOffset[0],
+            this.livePosition[1] - this.gcodeOffset[1],
+            this.livePosition[2] - this.gcodeOffset[2],
+            this.livePosition[3],
+        ]
     }
 
     get showTrackingButton() {
@@ -484,13 +528,14 @@ export default class Viewer extends Mixins(BaseMixin) {
         }
 
         viewer.gcodeProcessor.useHighQualityExtrusion(this.hdRendering)
-        viewer.gcodeProcessor.updateForceWireMode(this.forceLineRendering)
+        viewer.gcodeProcessor.updateForceWireMode(this.forceLineRendering || this.cncMode)
         viewer.gcodeProcessor.setAlpha(this.transparency)
         viewer.gcodeProcessor.setVoxelMode(this.voxelMode)
         viewer.gcodeProcessor.voxelWidth = this.voxelWidth
         viewer.gcodeProcessor.voxelHeight = this.voxelHeight
         viewer.gcodeProcessor.useSpecularColor(this.specularLighting)
         viewer.gcodeProcessor.setLiveTracking(false)
+        viewer.gcodeProcessor.g1AsExtrusion = this.cncMode
         viewer.buildObjects.objectCallback = this.objectCallback
 
         this.loadToolColors(this.extruderColors)
@@ -574,6 +619,7 @@ export default class Viewer extends Mixins(BaseMixin) {
                 this.fileSize = blob.length
                 // Do something with result
                 await viewer.processFile(blob)
+                this.fileData = viewer.fileData
             }
             this.finishLoad()
         })
@@ -621,6 +667,7 @@ export default class Viewer extends Mixins(BaseMixin) {
 
         viewer.updateRenderQuality(this.renderQuality.value)
         await viewer.processFile(text)
+        this.fileData = viewer.fileData
         this.loadingPercent = 100
         this.finishLoad()
         this.scrubFileSize = viewer.fileSize
@@ -652,6 +699,7 @@ export default class Viewer extends Mixins(BaseMixin) {
         this.loading = true
         this.loadingPercent = 0
         await viewer.reload()
+        this.fileData = viewer.fileData
         this.loadingPercent = 100
         this.finishLoad()
     }
@@ -694,6 +742,7 @@ export default class Viewer extends Mixins(BaseMixin) {
         const offset = 350
         if (newVal > 0 && this.printerIsPrinting && this.tracking && newVal > offset) {
             viewer.gcodeProcessor.updateFilePosition(newVal - offset)
+            this.scrubPosition = newVal - offset
         } else {
             viewer.gcodeProcessor.updateFilePosition(viewer.fileSize)
         }
@@ -737,6 +786,18 @@ export default class Viewer extends Mixins(BaseMixin) {
 
     set showTravelMoves(newVal: boolean) {
         this.$store.dispatch('gui/saveSetting', { name: 'gcodeViewer.showTravelMoves', value: newVal })
+    }
+
+    get showGCode(): boolean {
+        return this.$store.state.gui.gcodeViewer.showGCode ?? false
+    }
+
+    set showGCode(newVal: boolean) {
+        this.$store.dispatch('gui/saveSetting', { name: 'gcodeViewer.showGCode', value: newVal })
+        if (newVal && viewer) {
+            this.fileData = viewer.fileData
+        }
+        this.handleResize()
     }
 
     @Watch('showTravelMoves')
@@ -784,7 +845,7 @@ export default class Viewer extends Mixins(BaseMixin) {
     @Watch('forceLineRendering')
     async forceLineRenderingChanged(newVal: boolean) {
         if (viewer) {
-            viewer.gcodeProcessor.updateForceWireMode(newVal)
+            viewer.gcodeProcessor.updateForceWireMode(newVal || this.cncMode)
             await this.reloadViewer()
         }
     }
@@ -853,6 +914,17 @@ export default class Viewer extends Mixins(BaseMixin) {
             viewer.gcodeProcessor.useSpecularColor(newVal)
             //await this.reloadViewer()
         }
+    }
+
+    get cncMode() {
+        return this.$store.state.gui.gcodeViewer.cncMode
+    }
+
+    set cncMode(newVal) {
+        this.$store.dispatch('gui/saveSetting', { name: 'gcodeViewer.cncMode', value: newVal })
+        viewer.gcodeProcessor.g1AsExtrusion = newVal
+        viewer.gcodeProcessor.updateForceWireMode(this.forceLineRendering || newVal)
+        this.reloadViewer()
     }
 
     get extruderColors() {
@@ -1044,6 +1116,7 @@ export default class Viewer extends Mixins(BaseMixin) {
             this.scrubInterval = setInterval(() => {
                 this.scrubPosition += 100 * this.scrubSpeed
                 viewer.gcodeProcessor.updateFilePosition(this.scrubPosition)
+                viewer.simulateToolPosition()
                 if (this.tracking || this.scrubPosition >= this.scrubFileSize) {
                     this.scrubPlaying = false
                 }
@@ -1062,7 +1135,10 @@ export default class Viewer extends Mixins(BaseMixin) {
     @Debounce(200)
     @Watch('scrubPosition')
     updateScrubPosition(to: number): void {
-        if (!this.tracking) viewer.gcodeProcessor.updateFilePosition(to)
+        if (!this.tracking) {
+            viewer.gcodeProcessor.updateFilePosition(to)
+            viewer.simulateToolPosition()
+        }
     }
 
     fastForward(): void {

@@ -9,7 +9,7 @@ import {
 } from '@/store/files/types'
 import { RootState } from '@/store/types'
 import i18n from '@/plugins/i18n'
-import { validGcodeExtensions } from '@/store/variables'
+import { hiddenDirectories, validGcodeExtensions } from '@/store/variables'
 import axios from 'axios'
 
 export const actions: ActionTree<FileState, RootState> = {
@@ -67,28 +67,30 @@ export const actions: ActionTree<FileState, RootState> = {
         }
 
         if (payload.dirs?.length) {
-            payload.dirs.forEach((dir: ApiGetDirectoryReturnDir) => {
-                if (
-                    directory?.childrens?.findIndex(
-                        (element: FileStateFile) => element.isDirectory && element.filename === dir.dirname
-                    ) === -1
-                ) {
-                    commit('setCreateDir', {
-                        item: {
-                            path: path.length ? path + '/' + dir.dirname : dir.dirname,
-                            root: root,
-                            permissions: dir.permissions,
-                            modified: dir.modified * 1000,
-                        },
-                    })
+            payload.dirs
+                .filter((dir) => !hiddenDirectories.includes(dir.dirname))
+                .forEach((dir: ApiGetDirectoryReturnDir) => {
+                    if (
+                        directory?.childrens?.findIndex(
+                            (element: FileStateFile) => element.isDirectory && element.filename === dir.dirname
+                        ) === -1
+                    ) {
+                        commit('setCreateDir', {
+                            item: {
+                                path: path.length ? path + '/' + dir.dirname : dir.dirname,
+                                root: root,
+                                permissions: dir.permissions,
+                                modified: dir.modified * 1000,
+                            },
+                        })
 
-                    Vue.$socket.emit(
-                        'server.files.get_directory',
-                        { path: payload.requestParams.path + '/' + dir.dirname },
-                        { action: 'files/getDirectory' }
-                    )
-                }
-            })
+                        Vue.$socket.emit(
+                            'server.files.get_directory',
+                            { path: payload.requestParams.path + '/' + dir.dirname },
+                            { action: 'files/getDirectory' }
+                        )
+                    }
+                })
         }
 
         if (payload.files?.length) {
@@ -135,6 +137,28 @@ export const actions: ActionTree<FileState, RootState> = {
         }
     },
 
+    scanMetadata({ commit }, payload: { filename: string }) {
+        const rootPath = payload.filename.slice(0, payload.filename.indexOf('/'))
+        if (rootPath === 'gcodes') {
+            const requestFilename = payload.filename.slice(7)
+            commit('setMetadataRequested', { filename: requestFilename })
+            Vue.$socket.emit(
+                'server.files.metascan',
+                { filename: requestFilename },
+                { action: 'files/getScanMetadata' }
+            )
+        }
+    },
+
+    getScanMetadata({ dispatch }, payload: { filename: string }) {
+        if (payload !== undefined && payload.filename !== '') {
+            dispatch('getMetadata', payload)
+
+            const filename = payload.filename
+            Vue.$toast.success(i18n.t('Files.ScanMetaSuccess', { filename }).toString())
+        }
+    },
+
     requestMetadata({ commit }, payload: { filename: string }) {
         const rootPath = payload.filename.slice(0, payload.filename.indexOf('/'))
         if (rootPath === 'gcodes') {
@@ -167,18 +191,21 @@ export const actions: ActionTree<FileState, RootState> = {
                 break
 
             case 'move_file':
-                if (payload.source_item?.path === 'printer_autosave.cfg' && payload.source_item?.root === 'config')
+                // just create a new printer_autosave.cfg file instead of rename the printer.cfg
+                if (payload.source_item?.path === 'printer_autosave.cfg' && payload.source_item?.root === 'config') {
                     commit('setCreateFile', payload)
-                else {
-                    await commit('setMoveFile', payload)
-                    if (
-                        payload.item.root === 'gcodes' &&
-                        validGcodeExtensions.includes(payload.item.path.slice(payload.item.path.lastIndexOf('.')))
-                    ) {
-                        await dispatch('requestMetadata', {
-                            filename: 'gcodes/' + payload.item.path,
-                        })
-                    }
+                    return
+                }
+
+                // move all other files
+                await commit('setMoveFile', payload)
+                if (
+                    payload.item.root === 'gcodes' &&
+                    validGcodeExtensions.includes(payload.item.path.slice(payload.item.path.lastIndexOf('.')))
+                ) {
+                    await dispatch('requestMetadata', {
+                        filename: 'gcodes/' + payload.item.path,
+                    })
                 }
                 break
 
@@ -220,7 +247,7 @@ export const actions: ActionTree<FileState, RootState> = {
             const filename = payload.requestParams.dest
                 .substr(payload.requestParams.dest.lastIndexOf('/'))
                 .replace('/', '')
-            const sourceDir = payload.requestParams.dest.substr(0, payload.requestParams.dest.lastIndexOf('/'))
+            const sourceDir = payload.requestParams.source.substr(0, payload.requestParams.source.lastIndexOf('/'))
             const destDir = payload.requestParams.dest.substr(0, payload.requestParams.dest.lastIndexOf('/'))
 
             if (sourceDir === destDir) Vue.$toast.success(<string>i18n.t('Files.SuccessfullyRenamed', { filename }))
@@ -331,5 +358,27 @@ export const actions: ActionTree<FileState, RootState> = {
 
     uploadSetMaxNumber({ commit }, payload) {
         commit('uploadSetMaxNumber', payload)
+    },
+
+    downloadZip({ rootGetters }, payload) {
+        const apiUrl = rootGetters['socket/getUrl']
+        const url = `${apiUrl}/server/files/${payload.destination.root}/${encodeURI(payload.destination.path)}`
+        window.open(url)
+    },
+
+    rolloverLog(_, payload) {
+        payload.rolled_over.forEach((name: string) => {
+            Vue.$toast.success(<string>i18n.t('Machine.LogfilesPanel.RolloverToastSuccessful', { name }))
+        })
+
+        Object.keys(payload.failed).forEach((name: string) => {
+            const message = payload.failed[name]
+
+            Vue.$toast.error(<string>i18n.t('Machine.LogfilesPanel.RolloverToastFailed', { name, message }))
+        })
+
+        setTimeout(() => {
+            Vue.$socket.emit('server.files.get_directory', { path: 'logs' }, { action: 'files/getDirectory' })
+        }, 500)
     },
 }
